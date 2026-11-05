@@ -1,0 +1,2430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>AI Expense Tracker</title>
+
+<script>
+  // The Claude model that reads the messages.
+  const MODEL = "claude-haiku-5-5";
+</script>
+
+<!--
+  AI EXPENSE TRACKER — dark dashboard edition
+
+  No API key is stored in this file.
+  Each person adds their own key in the "Your Claude API key" dialog
+  inside the app. It is saved only in their browser and sent directly
+  from their browser to Anthropic.
+
+  To use it: open this file in Chrome / Edge / Firefox.
+-->
+
+<style>
+  /* ============ 1. DESIGN TOKENS ============ */
+  :root {
+    --bg: #0b0b0e;
+    --panel: #141417;
+    --panel-2: #1a1a20;
+    --line: #26262e;
+    --text: #f1f2f4;
+    --muted: #8c8e9b;
+    --lime: #d7ff4f;
+    --teal: #2fe3c7;
+    --grad: linear-gradient(135deg, #d7ff4f, #2fe3c7);
+    --red: #ff6b78;
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --radius: 16px;
+  }
+
+  /* ============ 2. BASE ============ */
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(900px 500px at 15% -10%, rgba(215, 255, 79, .06), transparent 60%),
+      radial-gradient(800px 480px at 100% 0%, rgba(47, 227, 199, .05), transparent 55%),
+      var(--bg);
+  }
+  body.modal-open { overflow: hidden; }
+
+  [hidden] { display: none !important; }
+
+  a { color: inherit; text-decoration: none; }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+
+  /* ============ 3. BUTTONS ============ */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    font: inherit; font-weight: 700; font-size: 13.5px;
+    padding: 11px 16px;
+    border-radius: 11px; border: 1px solid transparent;
+    cursor: pointer; white-space: nowrap;
+    transition: transform .15s, filter .15s, background .15s, border-color .15s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary {
+    color: #0b0b0e;
+    background: var(--grad);
+    box-shadow: 0 8px 20px rgba(215, 255, 79, .14);
+  }
+  .btn.primary:hover { filter: brightness(1.05); transform: translateY(-1px); }
+  .btn.ghost { background: var(--panel-2); color: var(--text); border-color: var(--line); }
+  .btn.ghost:hover { background: #202027; border-color: #33333d; }
+  .btn.small { padding: 8px 13px; font-size: 12.5px; border-radius: 10px; }
+  .btn.full { width: 100%; }
+  .btn:disabled { opacity: .6; cursor: progress; transform: none; filter: none; }
+
+  :focus-visible { outline: 2px solid rgba(215, 255, 79, .55); outline-offset: 2px; }
+
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--muted);
+    font-size: 14px; line-height: 1; cursor: pointer;
+    position: relative; flex: none;
+  }
+  .icon-btn:hover { color: var(--text); border-color: #33333d; }
+  .icon-btn.danger:hover { color: var(--red); background: rgba(255, 107, 120, .1); border-color: rgba(255, 107, 120, .3); }
+  .badge {
+    position: absolute; top: -5px; right: -5px;
+    min-width: 17px; height: 17px; padding: 0 4px;
+    border-radius: 99px; background: var(--grad); color: #0b0b0e;
+    font-size: 10px; font-weight: 800;
+    display: grid; place-items: center;
+  }
+
+  /* ============ 4. LAYOUT SHELL ============ */
+  .shell {
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr) 320px;
+    gap: 16px;
+    padding: 16px;
+    max-width: 1500px;
+    margin: 0 auto;
+    min-height: 100vh;
+    align-items: start;
+  }
+
+  /* ---- Sidebar ---- */
+  .sidebar {
+    position: sticky; top: 16px;
+    min-width: 0; /* grid items default to min-width:auto, which can widen the page */
+    height: calc(100vh - 32px);
+    display: flex; flex-direction: column; gap: 16px;
+    padding: 18px 14px;
+    background: linear-gradient(180deg, #111114, #0e0e11);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 2px 6px; }
+  .logo {
+    width: 34px; height: 34px; border-radius: 10px; flex: none;
+    display: grid; place-items: center;
+    background: var(--grad); color: #0b0b0e;
+    font-weight: 900; font-size: 17px;
+  }
+  .brand b { display: block; font-size: 15px; letter-spacing: -.01em; }
+  .brand small {
+    display: block; color: var(--muted); font-size: 10px;
+    letter-spacing: .1em; text-transform: uppercase; margin-top: 2px;
+  }
+
+  .nav { display: flex; flex-direction: column; gap: 4px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 10px;
+    color: var(--muted); font-weight: 600; font-size: 13.5px;
+    transition: background .15s, color .15s;
+  }
+  .nav-item:hover { background: rgba(255, 255, 255, .045); color: var(--text); }
+  .nav-item.active { background: #e9eaef; color: #141417; }
+  .nav-icon { width: 18px; text-align: center; flex: none; }
+
+  .pro-card {
+    margin-top: auto;
+    padding: 14px;
+    border-radius: 14px;
+    background: linear-gradient(140deg, rgba(215, 255, 79, .14), rgba(47, 227, 199, .10));
+    border: 1px solid rgba(215, 255, 79, .22);
+  }
+  .pro-title { font-weight: 800; font-size: 13.5px; }
+  .pro-sub {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--muted); font-size: 12px; margin: 8px 0 12px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #5a5d6b; flex: none; }
+  .dot.on { background: var(--green); box-shadow: 0 0 0 3px rgba(74, 222, 128, .15); }
+
+  .side-foot { display: flex; flex-direction: column; gap: 8px; }
+  .side-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 10px;
+    background: var(--panel-2); border: 1px solid var(--line);
+    color: var(--text); font: inherit; font-weight: 600; font-size: 13px;
+    cursor: pointer; text-align: left; width: 100%;
+    transition: background .15s, border-color .15s;
+  }
+  .side-btn:hover { background: #202027; border-color: #33333d; }
+
+  /* ---- Top bar ---- */
+  .main-wrap { min-width: 0; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .topbar h1 { margin: 0; font-size: 24px; letter-spacing: -.03em; }
+  .topbar p { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; }
+  .topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .search {
+    display: flex; align-items: center; gap: 8px;
+    height: 38px; padding: 0 14px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+  }
+  .search:focus-within { border-color: rgba(215, 255, 79, .45); }
+  .search svg { width: 15px; height: 15px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; flex: none; }
+  .search input {
+    border: 0; background: transparent; color: var(--text);
+    width: 190px; padding: 0; font-size: 13px;
+  }
+  .search input:focus { outline: none; box-shadow: none; background: transparent; border: 0; }
+  .search input::placeholder { color: var(--muted); }
+
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex: none;
+    display: grid; place-items: center;
+    background: var(--grad); color: #0b0b0e;
+    font-weight: 900; font-size: 13px;
+  }
+
+  /* ============ 5. CARDS ============ */
+  .content { display: flex; flex-direction: column; gap: 16px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    scroll-margin-top: 16px;
+  }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .card-head h2 { margin: 0; font-size: 15px; letter-spacing: -.01em; }
+  .card-sub-head h3 {
+    margin: 0 0 12px; font-size: 11.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .chart-divider { height: 1px; background: var(--line); margin: 18px 0 16px; }
+  .hint { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+  .head-actions { display: flex; align-items: center; gap: 8px; }
+
+  .pill {
+    display: inline-block; padding: 4px 10px;
+    border-radius: 999px; background: rgba(215, 255, 79, .12); color: var(--lime);
+    font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  }
+
+  .import-card {
+    background:
+      linear-gradient(180deg, rgba(215, 255, 79, .05), transparent 45%),
+      var(--panel);
+  }
+  #smsInput {
+    width: 100%; min-height: 104px;
+    background: #101013; color: var(--text);
+    border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 14px; font: inherit; font-size: 13.5px; line-height: 1.55;
+    resize: vertical;
+  }
+  #smsInput:focus {
+    outline: none; border-color: rgba(215, 255, 79, .45);
+    box-shadow: 0 0 0 4px rgba(215, 255, 79, .08);
+  }
+  #smsInput::placeholder { color: #5f6270; }
+
+  .actions-row {
+    display: flex; align-items: center; gap: 10px;
+    flex-wrap: wrap; margin-top: 12px;
+  }
+  .status { margin-left: auto; font-size: 12.5px; color: var(--muted); }
+
+  .alert {
+    margin-top: 14px; padding: 12px 14px;
+    border: 1px solid rgba(255, 107, 120, .3); border-radius: 12px;
+    background: rgba(255, 107, 120, .1); color: #ffb3ba;
+    font-size: 13px; line-height: 1.5;
+  }
+
+  /* ---- Live auto-import bar ---- */
+  .auto-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px dashed var(--line);
+  }
+  .switch {
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer; user-select: none;
+  }
+  /* The real checkbox is hidden but still keyboard-usable */
+  .switch input {
+    position: absolute; width: 1px; height: 1px;
+    opacity: 0; margin: 0;
+  }
+  .switch-track {
+    position: relative; flex: none;
+    width: 38px; height: 22px; border-radius: 99px;
+    background: #2a2a33; border: 1px solid var(--line);
+    transition: background .18s, border-color .18s;
+  }
+  .switch-knob {
+    position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #8c8e9b;
+    transition: transform .18s, background .18s;
+  }
+  .switch input:checked + .switch-track {
+    background: rgba(215, 255, 79, .18);
+    border-color: rgba(215, 255, 79, .5);
+  }
+  .switch input:checked + .switch-track .switch-knob {
+    transform: translateX(16px);
+    background: var(--lime);
+  }
+  .switch input:focus-visible + .switch-track {
+    outline: 2px solid rgba(215, 255, 79, .55);
+    outline-offset: 2px;
+  }
+  .switch-label b { display: block; font-size: 13px; }
+  .switch-label small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+
+  .auto-status {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; color: var(--muted);
+  }
+  .auto-status::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: #55586a; flex: none;
+  }
+  .auto-status.on::before { background: var(--green); box-shadow: 0 0 0 3px rgba(74, 222, 128, .15); }
+  .auto-status.busy::before { background: var(--lime); animation: pulse 1s ease-in-out infinite; }
+  .auto-status.warn::before { background: var(--amber); }
+  .auto-status.error::before { background: var(--red); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+  /* ============ 6. STAT CARDS ============ */
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; scroll-margin-top: 16px; }
+  .stat-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .stat-label {
+    font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
+  }
+  .stat-amount {
+    display: block; font-size: 30px; font-weight: 800;
+    letter-spacing: -.03em; margin: 10px 0 6px;
+  }
+  .stat-sub { color: var(--muted); font-size: 12px; }
+
+  .donut-wrap { position: relative; width: 96px; height: 96px; flex: none; }
+  .donut { width: 96px; height: 96px; transform: rotate(-90deg); }
+  .donut-bg { fill: none; stroke: #22222a; stroke-width: 5; }
+  .donut-fill {
+    fill: none; stroke: url(#donutGrad); stroke-width: 5;
+    stroke-linecap: round; transition: stroke-dasharray .5s ease;
+  }
+  .donut-label {
+    position: absolute; inset: 0 0 16px;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 16px; letter-spacing: -.02em;
+  }
+  .donut-cap {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    text-align: center; font-size: 10.5px; color: var(--muted);
+  }
+
+  .mini-bars { display: flex; align-items: flex-end; gap: 7px; height: 72px; }
+  .mini-bar {
+    flex: 1; max-width: 16px; min-height: 5px; border-radius: 5px;
+    background: linear-gradient(180deg, var(--teal), rgba(47, 227, 199, .16));
+    transition: height .4s ease;
+  }
+  .mini-bar.current { background: linear-gradient(180deg, var(--lime), rgba(215, 255, 79, .16)); }
+  .mini-cap { display: block; margin-top: 8px; font-size: 11px; color: var(--muted); }
+
+  /* ============ 7. OVERVIEW / TREND / CATEGORY CHART ============ */
+  .grid-2 { display: grid; grid-template-columns: 1.7fr .9fr; gap: 16px; align-items: start; }
+  .trend svg { width: 100%; height: auto; display: block; }
+  .trend .grid { stroke: #23232b; stroke-width: 1; }
+  .trend .axis { fill: #8c8e9b; font-size: 10px; }
+
+  .chart { display: flex; flex-direction: column; gap: 13px; }
+  .bar-row { font-size: 12.5px; }
+  .bar-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+  .bar-top b { font-weight: 700; font-size: 13px; }
+  .bar-top span { color: var(--muted); white-space: nowrap; }
+  .bar-track { height: 9px; background: #202028; border-radius: 99px; overflow: hidden; }
+  .bar-fill {
+    height: 100%; border-radius: 99px;
+    transform-origin: left;
+    animation: grow .45s ease both;
+  }
+  @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+  .side-stats { display: flex; flex-direction: column; gap: 16px; }
+  .mini-stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .mini-stat strong { display: block; font-size: 22px; font-weight: 800; letter-spacing: -.02em; margin: 8px 0 4px; }
+  .mini-stat small { color: var(--muted); font-size: 11.5px; }
+
+  .month-picker {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .month-picker select {
+    width: auto; padding: 7px 10px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 9px; font-size: 12.5px; font-weight: 600;
+    text-transform: none; letter-spacing: 0;
+  }
+
+  /* ============ 8. HISTORY TABLE ============ */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 660px; }
+  th {
+    text-align: left; padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--muted); white-space: nowrap;
+  }
+  td { padding: 12px; border-bottom: 1px solid #1d1d24; font-size: 13.5px; vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255, 255, 255, .025); }
+
+  .tx-cell { display: flex; align-items: center; gap: 10px; }
+  .tx-icon {
+    width: 34px; height: 34px; border-radius: 10px; flex: none;
+    display: grid; place-items: center; font-weight: 800; font-size: 14px;
+  }
+  .tx-text b { display: block; font-size: 13.5px; }
+  .tx-text small { color: var(--muted); font-size: 11.5px; }
+
+  .tag {
+    display: inline-block; padding: 3px 9px; border-radius: 7px;
+    font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  }
+  .tag.debit { background: rgba(255, 107, 120, .14); color: #ff98a1; }
+  .tag.credit { background: rgba(74, 222, 128, .14); color: #86efac; }
+  .tag.auto { background: rgba(47, 227, 199, .14); color: #7ff2e0; }
+
+  .amount { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .amount.debit { color: #ff98a1; }
+  .amount.credit { color: #86efac; }
+
+  td select {
+    min-width: 150px; padding: 7px 9px;
+    border-radius: 9px; font-size: 12.5px; font-weight: 600;
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+  }
+
+  .empty { margin: 0; padding: 26px 10px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  /* ============ 9. RIGHT RAIL ============ */
+  .rail { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .balance-amount { display: block; font-size: 30px; font-weight: 800; letter-spacing: -.03em; margin: 6px 0 6px; }
+
+  .credit-card {
+    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #1d1d24, #141418);
+    border: 1px solid var(--line); border-radius: 16px; padding: 18px;
+  }
+  .credit-card::before {
+    content: ""; position: absolute; width: 190px; height: 190px;
+    right: -70px; top: -80px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(215, 255, 79, .22), transparent 70%);
+    pointer-events: none;
+  }
+  .cc-top {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+    position: relative;
+  }
+  .cc-chip { width: 36px; height: 24px; border-radius: 6px; background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+  .cc-amount { position: relative; font-size: 28px; font-weight: 800; letter-spacing: -.03em; margin: 18px 0 4px; }
+  .cc-meta { position: relative; color: var(--muted); font-size: 12px; }
+  .cc-dots { position: relative; letter-spacing: 4px; color: #55586a; font-size: 13px; margin-top: 16px; }
+  .cc-foot {
+    position: relative; display: flex; justify-content: space-between;
+    margin-top: 8px; font-size: 12px; color: var(--muted);
+  }
+  .cc-foot b { color: var(--text); font-weight: 700; }
+
+  .recent-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 0; border-bottom: 1px solid #1d1d24;
+  }
+  .recent-item:last-child { border-bottom: 0; padding-bottom: 0; }
+  .recent-item:first-child { padding-top: 0; }
+  .recent-icon {
+    width: 32px; height: 32px; border-radius: 9px; flex: none;
+    display: grid; place-items: center; font-weight: 800; font-size: 13px;
+  }
+  .recent-main { min-width: 0; flex: 1; }
+  .recent-main b { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent-main small { color: var(--muted); font-size: 11.5px; }
+  .recent-right { text-align: right; flex: none; }
+  .recent-right b { display: block; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .recent-right small { color: var(--muted); font-size: 11px; }
+
+  /* Small round buttons on each Recent activity row: edit (✎) + delete (✕) */
+  .recent-actions {
+    flex: none; display: flex; flex-direction: column; gap: 4px;
+    opacity: .6; transition: opacity .15s;
+  }
+  .recent-item:hover .recent-actions,
+  .recent-actions:focus-within { opacity: 1; }
+  @media (hover: none) {
+    /* Touch screens have no hover: keep the buttons fully visible */
+    .recent-actions { opacity: 1; }
+  }
+
+  .recent-btn {
+    width: 26px; height: 26px; padding: 0;
+    display: grid; place-items: center;
+    border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--muted);
+    font-size: 12px; line-height: 1; cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .recent-btn:hover {
+    color: var(--lime);
+    border-color: rgba(215, 255, 79, .4);
+    background: rgba(215, 255, 79, .08);
+  }
+  .recent-btn.danger:hover {
+    color: var(--red);
+    border-color: rgba(255, 107, 120, .4);
+    background: rgba(255, 107, 120, .1);
+  }
+
+  .footer-note { color: var(--muted); font-size: 11.5px; text-align: center; margin: 4px 0 0; }
+
+  /* ============ 10. MODALS & FORMS ============ */
+  .modal {
+    position: fixed; inset: 0; z-index: 60;
+    display: flex; align-items: center; justify-content: center;
+    padding: 18px;
+    background: rgba(0, 0, 0, .65);
+    backdrop-filter: blur(4px);
+  }
+  .modal-card {
+    width: min(520px, 100%); max-height: 90vh; overflow: auto;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 18px; padding: 20px;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, .5);
+  }
+  .modal-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; margin-bottom: 14px;
+  }
+  .modal-head h2 { margin: 0 0 4px; font-size: 17px; letter-spacing: -.02em; }
+
+  .key-note { margin: 0 0 12px; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+  .key-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .key-controls input {
+    flex: 1 1 220px; min-width: 0;
+    background: #101013; color: var(--text);
+    border: 1px solid var(--line); border-radius: 11px;
+    padding: 11px 13px; font: inherit; font-size: 13.5px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+  .key-controls input:focus {
+    outline: none; border-color: rgba(215, 255, 79, .45);
+    box-shadow: 0 0 0 4px rgba(215, 255, 79, .08);
+  }
+  .key-controls input::placeholder { color: #5f6270; }
+  .key-message { min-height: 1em; margin: 10px 0 0; font-size: 12.5px; font-weight: 600; color: var(--green); }
+  .key-message.error { color: var(--red); }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.full { grid-column: 1 / -1; }
+  .field label {
+    font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .field input, .field select {
+    width: 100%; background: #101013; color: var(--text);
+    border: 1px solid var(--line); border-radius: 11px;
+    padding: 10px 12px; font: inherit; font-size: 13.5px;
+  }
+  .field input:focus, .field select:focus {
+    outline: none; border-color: rgba(215, 255, 79, .45);
+    box-shadow: 0 0 0 4px rgba(215, 255, 79, .08);
+  }
+  .field input::placeholder { color: #5f6270; }
+
+  /* ============ 11. RESPONSIVE ============ */
+  @media (max-width: 1180px) {
+    .shell { grid-template-columns: 236px minmax(0, 1fr); }
+    .rail {
+      grid-column: 1 / -1;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      align-items: start;
+    }
+  }
+
+  @media (max-width: 1000px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 900px) {
+    /* minmax(0, 1fr) instead of 1fr: a plain 1fr track grows to fit the
+       sidebar's content (the nowrap nav items) and makes the page scroll
+       sideways. minmax(0, 1fr) lets the track shrink; .nav scrolls itself. */
+    .shell { grid-template-columns: minmax(0, 1fr); }
+    .sidebar {
+      position: static; height: auto;
+      min-width: 0;
+      flex-direction: row; align-items: center; flex-wrap: wrap; gap: 12px;
+      padding: 12px 14px;
+    }
+    .nav { flex-direction: row; overflow-x: auto; gap: 6px; flex: 1; min-width: 0; }
+    .nav-item { white-space: nowrap; }
+    .pro-card { margin-top: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; }
+    .pro-sub { margin: 0; }
+    .side-foot { flex-direction: row; }
+    .side-btn { width: auto; }
+  }
+
+  @media (max-width: 680px) {
+    .shell { padding: 12px; gap: 12px; }
+    .card { padding: 16px; }
+    .stats-row { grid-template-columns: 1fr; }
+    .topbar-actions { width: 100%; }
+    .search { flex: 1; }
+    .search input { width: 100%; }
+    .status { margin-left: 0; width: 100%; }
+
+    /* Table becomes stacked cards */
+    .table-wrap table { min-width: 0; }
+    .table-wrap table, .table-wrap thead, .table-wrap tbody,
+    .table-wrap tr, .table-wrap th, .table-wrap td { display: block; width: 100%; }
+    .table-wrap thead { display: none; }
+    .table-wrap tbody tr {
+      border: 1px solid var(--line); border-radius: 12px;
+      padding: 8px 12px; margin-bottom: 10px; background: var(--panel-2);
+    }
+    .table-wrap tbody tr:hover { background: var(--panel-2); }
+    .table-wrap td {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 7px 0; border: 0;
+    }
+    .table-wrap td::before {
+      content: attr(data-label);
+      font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .table-wrap td.actions { justify-content: flex-end; }
+    .table-wrap td.actions::before { content: ""; }
+    .table-wrap td select { width: auto; }
+  }
+
+  @media (max-width: 440px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .stat-card { flex-direction: column; align-items: flex-start; }
+    .donut-wrap { align-self: center; }
+  }
+</style>
+</head>
+
+<body>
+<div class="shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">₹</span>
+      <span class="brand-text">
+        <b>Expenses</b>
+        <small>AI Tracker</small>
+      </span>
+    </div>
+
+    <nav class="nav" aria-label="Main navigation">
+      <a class="nav-item active" href="#overview"><span class="nav-icon" aria-hidden="true">◉</span>Dashboard</a>
+      <a class="nav-item" href="#analytics"><span class="nav-icon" aria-hidden="true">◈</span>Analytics</a>
+      <a class="nav-item" href="#history"><span class="nav-icon" aria-hidden="true">▤</span>Transactions</a>
+      <a class="nav-item" href="#import"><span class="nav-icon" aria-hidden="true">✦</span>AI import</a>
+    </nav>
+
+    <!-- API key status lives here: quick way to add or change your key -->
+    <div class="pro-card">
+      <div class="pro-title">Claude AI</div>
+      <div class="pro-sub">
+        <span id="keyDot" class="dot" aria-hidden="true"></span>
+        <span id="keyState">Not added</span>
+      </div>
+      <button id="keyBtn" class="btn primary small full" type="button">Manage key</button>
+    </div>
+
+    <div class="side-foot">
+      <button id="exportBtn" class="side-btn" type="button">
+        <span aria-hidden="true">⤓</span> Export CSV
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main-wrap">
+    <header class="topbar">
+      <div>
+        <h1>Dashboard</h1>
+        <p id="subGreeting">Your money, at a glance.</p>
+      </div>
+
+      <div class="topbar-actions">
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+          <span class="sr-only">Search transactions</span>
+          <input id="searchInput" type="search" placeholder="Search merchant or category" />
+        </label>
+
+        <button id="keyBtn2" class="btn ghost small" type="button">
+          <span id="keyBtnDot" class="dot" aria-hidden="true"></span>API key
+        </button>
+
+        <button id="bellBtn" class="icon-btn" type="button" title="Jump to transactions" aria-label="Jump to transactions">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6"></path>
+            <path d="M10 20a2 2 0 0 0 4 0"></path>
+          </svg>
+          <span id="bellCount" class="badge">0</span>
+        </button>
+
+        <div class="avatar" aria-hidden="true">₹</div>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- ============ AI IMPORT ============ -->
+      <section class="card import-card" id="import" aria-labelledby="importTitle">
+        <div class="card-head">
+          <h2 id="importTitle">✦ AI import</h2>
+          <p class="hint">Paste one message per line. OTPs, ads and balance alerts are skipped automatically.</p>
+        </div>
+
+        <label class="sr-only" for="smsInput">Bank messages and receipts</label>
+        <textarea id="smsInput" spellcheck="false" placeholder="Rs.450.00 debited from A/c XX1234 at SWIGGY on 03-11-26&#10;Rs.25,000.00 credited to A/c XX1234 from ACME SALARY on 01-11-26"></textarea>
+
+        <div class="actions-row">
+          <button id="categorizeBtn" class="btn primary" type="button">✦ Categorize with AI</button>
+          <button id="sampleBtn" class="btn ghost" type="button">Load sample</button>
+          <span id="status" class="status" role="status" aria-live="polite"></span>
+        </div>
+
+        <!-- Live auto-import: watches the local server for bank SMS -->
+        <div class="auto-bar">
+          <label class="switch" for="autoToggle">
+            <input type="checkbox" id="autoToggle" />
+            <span class="switch-track" aria-hidden="true"><span class="switch-knob"></span></span>
+            <span class="switch-label">
+              <b>Live auto-import</b>
+              <small id="autoHint">Checking for the SMS relay…</small>
+            </span>
+          </label>
+          <button id="autoCheckBtn" class="btn ghost small" type="button" hidden>Check now</button>
+          <span id="autoStatus" class="auto-status">Off</span>
+        </div>
+
+        <div id="errorBox" class="alert" role="alert" hidden></div>
+      </section>
+
+      <!-- ============ SUMMARY CARDS ============ -->
+      <section class="stats-row" id="overview" aria-label="Summary">
+        <div class="card stat-card">
+          <div>
+            <span class="stat-label">Total spent</span>
+            <strong class="stat-amount" id="spentTotal">₹0</strong>
+            <small class="stat-sub" id="spentSub">No transactions yet</small>
+          </div>
+          <div class="donut-wrap">
+            <svg class="donut" viewBox="0 0 36 36" aria-hidden="true">
+              <defs>
+                <linearGradient id="donutGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#d7ff4f"></stop>
+                  <stop offset="100%" stop-color="#2fe3c7"></stop>
+                </linearGradient>
+              </defs>
+              <circle class="donut-bg" cx="18" cy="18" r="15.9155"></circle>
+              <circle class="donut-fill" id="donutFill" cx="18" cy="18" r="15.9155" stroke-dasharray="0 100"></circle>
+            </svg>
+            <span class="donut-label" id="donutLabel">0%</span>
+            <span class="donut-cap" id="donutCap">No spending</span>
+          </div>
+        </div>
+
+        <div class="card stat-card">
+          <div>
+            <span class="stat-label">Total received</span>
+            <strong class="stat-amount" id="receivedTotal">₹0</strong>
+            <small class="stat-sub" id="receivedSub">No transactions yet</small>
+          </div>
+          <div>
+            <div class="mini-bars" id="miniBars"></div>
+            <small class="mini-cap">Received per month</small>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ OVERVIEW + CATEGORY CHART ============ -->
+      <section class="grid-2" id="analytics">
+        <div class="card">
+          <div class="card-head">
+            <h2>Overview statistic</h2>
+            <label class="month-picker" for="monthSelect">
+              Period
+              <select id="monthSelect"></select>
+            </label>
+          </div>
+
+          <div class="card-sub-head"><h3 id="trendCaption">Spending trend</h3></div>
+          <div class="trend" id="trendChart"></div>
+
+          <div class="chart-divider"></div>
+
+          <div class="card-sub-head"><h3>Spending by category</h3></div>
+          <div id="chart" class="chart"></div>
+        </div>
+
+        <div class="card side-stats">
+          <div class="mini-stat">
+            <span class="stat-label">Top category</span>
+            <strong id="topCat">—</strong>
+            <small id="topCatSub">No data yet</small>
+          </div>
+          <div class="mini-stat">
+            <span class="stat-label">Net</span>
+            <strong id="miniNet">₹0</strong>
+            <small id="miniNetSub">No transactions yet</small>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ HISTORY ============ -->
+      <section class="card" id="history" aria-labelledby="historyTitle">
+        <div class="card-head">
+          <h2 id="historyTitle">History</h2>
+          <div class="head-actions">
+            <span class="pill" id="txCount">0 transactions</span>
+            <button id="addBtn2" class="btn ghost small" type="button">+ Add</button>
+          </div>
+        </div>
+
+        <div class="table-wrap" id="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Transaction</th>
+                <th scope="col">Type</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Date</th>
+                <th scope="col">Category</th>
+                <th scope="col"><span class="sr-only">Delete</span></th>
+              </tr>
+            </thead>
+            <tbody id="txBody"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="emptyState" hidden></p>
+      </section>
+
+      <p class="footer-note">
+        Your API key and expense data stay only in this browser. Clearing browser data removes both.
+      </p>
+    </main>
+  </div>
+
+  <!-- ============ RIGHT RAIL ============ -->
+  <aside class="rail" aria-label="Balance and recent activity">
+    <div class="card">
+      <div class="card-head">
+        <h2>Period balance</h2>
+        <span class="pill" id="balancePeriod">—</span>
+      </div>
+      <strong class="balance-amount" id="railNet">₹0</strong>
+      <small class="stat-sub" id="railNetSub">No transactions yet</small>
+      <div class="actions-row">
+        <button id="addBtn" class="btn primary full" type="button">+ Add transaction</button>
+      </div>
+    </div>
+
+    <div class="credit-card">
+      <div class="cc-top"><span>Spending card</span><span class="cc-chip" aria-hidden="true"></span></div>
+      <div class="cc-amount" id="cardSpent">₹0</div>
+      <div class="cc-meta" id="cardPeriod">All time</div>
+      <div class="cc-dots" aria-hidden="true">•••• •••• •••• ••••</div>
+      <div class="cc-foot"><span>Total spent</span><b id="cardCount">0 payments</b></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Recent activity</h2>
+        <span class="pill" id="recentCount">0</span>
+      </div>
+      <div id="recentList"></div>
+    </div>
+  </aside>
+</div>
+
+<!-- ============ MODALS ============ -->
+<div id="keyPanel" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="keyTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="keyTitle">Your Claude API key</h2>
+        <p class="hint">Each person uses their own key.</p>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+    </div>
+
+    <p class="key-note">
+      This app doesn't include a key. Your key is saved only in this browser and sent
+      directly to Anthropic &mdash; it is never written into this file.
+    </p>
+
+    <div class="key-controls">
+      <label class="sr-only" for="apiKeyInput">Your Anthropic API key</label>
+      <input id="apiKeyInput" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false" />
+      <button id="saveKeyBtn" class="btn primary" type="button">Save key</button>
+      <button id="forgetKeyBtn" class="btn ghost" type="button" hidden>Forget</button>
+    </div>
+
+    <p id="keyMessage" class="key-message" role="status" aria-live="polite"></p>
+
+    <p class="key-note">
+      Get your own key at <strong>console.anthropic.com &rarr; API Keys</strong>.
+      Usage is billed to the key's owner.
+    </p>
+  </div>
+</div>
+
+<div id="addModal" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="addTitle">Add transaction</h2>
+        <p class="hint" id="addHint">For cash spends or anything the SMS missed.</p>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+    </div>
+
+    <form id="manualForm" class="form-grid" novalidate>
+      <div class="field">
+        <label for="mDate">Date</label>
+        <input id="mDate" type="date" required />
+      </div>
+      <div class="field">
+        <label for="mAmount">Amount (₹)</label>
+        <input id="mAmount" type="number" inputmode="decimal" min="0.01" step="0.01" placeholder="450.00" required />
+      </div>
+      <div class="field full">
+        <label for="mMerchant">Merchant / description</label>
+        <input id="mMerchant" type="text" placeholder="e.g. Swiggy dinner" maxlength="60" />
+      </div>
+      <div class="field">
+        <label for="mType">Type</label>
+        <select id="mType">
+          <option value="debit">Debit (spent)</option>
+          <option value="credit">Credit (received)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="mCategory">Category</label>
+        <select id="mCategory"></select>
+      </div>
+      <div class="field full">
+        <button id="addSubmitBtn" class="btn primary full" type="submit">Add transaction</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   1. SETTINGS
+   MODEL is set near the top of this file (in <head>).
+   The API key is entered in the app and stored in this browser.
+   ========================================================= */
+
+// Anthropic's Messages API endpoint.
+const API_URL = "https://api.anthropic.com/v1/messages";
+
+// The only categories the app knows about.
+// Add a new one here and it appears in every dropdown automatically.
+const CATEGORIES = [
+  "Food", "Groceries", "Transport", "Shopping", "Bills & Recharge",
+  "Health", "Entertainment", "Education", "Rent", "Transfers", "Other"
+];
+
+// One colour per category for charts and icons.
+const CATEGORY_COLORS = {
+  "Food": "#f97316",
+  "Groceries": "#22c55e",
+  "Transport": "#3b82f6",
+  "Shopping": "#ec4899",
+  "Bills & Recharge": "#0ea5e9",
+  "Health": "#ef4444",
+  "Entertainment": "#a78bfa",
+  "Education": "#14b8a6",
+  "Rent": "#eab308",
+  "Transfers": "#64748b",
+  "Other": "#8c8e9b"
+};
+
+// If Claude returns a slightly different label, map it to a real category.
+const CATEGORY_ALIASES = {
+  "food": "Food", "food & dining": "Food", "dining": "Food", "restaurant": "Food",
+  "restaurants": "Food", "cafe": "Food", "swiggy": "Food", "zomato": "Food",
+  "grocery": "Groceries", "groceries": "Groceries", "supermarket": "Groceries", "kirana": "Groceries",
+  "transport": "Transport", "transportation": "Transport", "travel": "Transport", "fuel": "Transport",
+  "petrol": "Transport", "cab": "Transport", "uber": "Transport", "ola": "Transport",
+  "shopping": "Shopping", "retail": "Shopping", "clothing": "Shopping", "electronics": "Shopping",
+  "bill": "Bills & Recharge", "bills": "Bills & Recharge", "recharge": "Bills & Recharge",
+  "utilities": "Bills & Recharge", "utility": "Bills & Recharge", "mobile": "Bills & Recharge",
+  "internet": "Bills & Recharge", "electricity": "Bills & Recharge",
+  "health": "Health", "medical": "Health", "healthcare": "Health", "pharmacy": "Health", "hospital": "Health",
+  "entertainment": "Entertainment", "movies": "Entertainment", "streaming": "Entertainment", "leisure": "Entertainment",
+  "education": "Education", "school": "Education", "college": "Education", "courses": "Education", "tuition": "Education",
+  "rent": "Rent", "housing": "Rent", "rent & housing": "Rent",
+  "transfer": "Transfers", "transfers": "Transfers", "upi": "Transfers", "p2p": "Transfers",
+  "other": "Other", "misc": "Other", "miscellaneous": "Other"
+};
+
+// Where the data lives in the browser. Change the v1 if you ever reset.
+const STORAGE_KEY = "ai-expense-tracker-v1";
+
+// Each person's own API key is stored under this separate key.
+// It is never part of the HTML file, so sharing the file shares no secret.
+const KEY_STORAGE = "ai-expense-tracker-api-key";
+
+
+/* =========================================================
+   2. STATE & LOCAL STORAGE
+   ========================================================= */
+
+// Each transaction looks like:
+// { id, date: "2026-11-03", merchant: "SWIGGY", amount: 450, type: "debit", category: "Food" }
+let transactions = loadTransactions();
+
+// Which month is shown. "all" means every month. "" = auto-pick on first load.
+let selectedMonth = "";
+
+// What the search box is filtering by (lowercase, empty = no filter).
+let searchQuery = "";
+
+// Which transaction is being edited right now (null = the dialog will ADD one).
+let editingId = null;
+
+function loadTransactions() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const list = saved ? JSON.parse(saved) : [];
+    return Array.isArray(list) ? list.filter(function (t) { return t && t.id; }) : [];
+  } catch (err) {
+    console.warn("Could not read saved data:", err);
+    return [];
+  }
+}
+
+function saveTransactions() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  } catch (err) {
+    console.warn("Could not save data:", err);
+  }
+}
+
+
+/* =========================================================
+   3. SMALL HELPERS
+   ========================================================= */
+
+const $ = function (id) { return document.getElementById(id); };
+const pad = function (n) { return String(n).padStart(2, "0"); };
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+
+// Format a number as Indian rupees, e.g. 123456.5 → ₹1,23,456.50
+function inr(amount) {
+  const value = Number(amount) || 0;
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+  const digits = abs % 1 === 0 ? 0 : 2;
+  return sign + "₹" + abs.toLocaleString("en-IN", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: 2
+  });
+}
+
+// Short form for chart axis labels: 12500 → ₹12k
+function shortMoney(value) {
+  if (value >= 1000) return "₹" + (value / 1000).toFixed(value >= 10000 ? 0 : 1) + "k";
+  return "₹" + Math.round(value);
+}
+
+// "2026-11" → "November 2026"
+function monthLabel(key) {
+  if (key === "all") return "All time";
+  const parts = key.split("-").map(Number);
+  if (!parts[0] || !parts[1]) return key;
+  return new Date(parts[0], parts[1] - 1, 1)
+    .toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+}
+
+// "2026-11" → "Nov" (for chart labels)
+function monthShort(key) {
+  const parts = key.split("-").map(Number);
+  if (!parts[0] || !parts[1]) return key;
+  return new Date(parts[0], parts[1] - 1, 1)
+    .toLocaleDateString("en-IN", { month: "short" });
+}
+
+// "2026-11-03" → "03 Nov 2026"
+function prettyDate(iso) {
+  const parts = String(iso).split("-").map(Number);
+  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) return iso;
+  return new Date(parts[0], parts[1] - 1, parts[2])
+    .toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+// How many days are in a month key like "2026-11".
+function daysInMonth(key) {
+  const parts = key.split("-").map(Number);
+  if (!parts[0] || !parts[1]) return 0;
+  return new Date(parts[0], parts[1], 0).getDate();
+}
+
+// Escape text before putting it inside HTML.
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, function (ch) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+  });
+}
+/* =========================================================
+   4. CLEANING UP WHAT THE AI RETURNS
+   ========================================================= */
+
+// Bank messages use "03-11-26". The table needs "2026-11-03".
+function normalizeDate(value) {
+  const text = String(value || "").trim();
+
+  // Already ISO: 2026-11-03 (possibly with a time after it)
+  let match = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (match) return match[1] + "-" + pad(match[2]) + "-" + pad(match[3]);
+
+  // Indian style: 03-11-26, 3/11/2026, 03.11.26
+  match = text.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/);
+  if (match) {
+    const year = match[3].length === 2 ? "20" + match[3] : match[3];
+    return year + "-" + pad(match[2]) + "-" + pad(match[1]);
+  }
+
+  // Last resort: let the browser parse things like "03 Nov 2026"
+  const parsed = new Date(text);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.getFullYear() + "-" + pad(parsed.getMonth() + 1) + "-" + pad(parsed.getDate());
+  }
+
+  return todayISO();
+}
+
+function normalizeType(value) {
+  const text = String(value || "").toLowerCase();
+  if (text.indexOf("credit") !== -1 || text === "cr" || text.indexOf("received") !== -1) return "credit";
+  return "debit";
+}
+
+function normalizeCategory(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return "Other";
+
+  // Exact match first
+  const exact = CATEGORIES.find(function (c) { return c.toLowerCase() === text; });
+  if (exact) return exact;
+
+  // Common aliases next
+  if (CATEGORY_ALIASES[text]) return CATEGORY_ALIASES[text];
+
+  // Finally, partial match ("Food & Beverages" contains "food")
+  const partial = Object.keys(CATEGORY_ALIASES).find(function (key) {
+    return text.indexOf(key) !== -1;
+  });
+  return partial ? CATEGORY_ALIASES[partial] : "Other";
+}
+
+// Turn one raw AI object into a safe transaction (or null if it's unusable).
+function buildTransaction(raw) {
+  if (!raw || typeof raw !== "object") return null;
+
+  const amount = Math.round(Math.abs(Number(raw.amount)) * 100) / 100;
+  if (!amount || !isFinite(amount)) return null;
+
+  const merchant = String(raw.merchant || "Unknown").trim().slice(0, 60) || "Unknown";
+
+  return {
+    id: uid(),
+    date: normalizeDate(raw.date),
+    merchant: merchant,
+    amount: amount,
+    type: normalizeType(raw.type),
+    category: normalizeCategory(raw.category)
+  };
+}
+
+// Used to avoid adding the exact same transaction twice.
+function transactionKey(t) {
+  return t.date + "|" + t.merchant.toLowerCase() + "|" + Number(t.amount).toFixed(2) + "|" + t.type;
+}
+
+
+/* =========================================================
+   5. RENDERING THE UI
+   ========================================================= */
+
+function availableMonths() {
+  const set = new Set();
+  transactions.forEach(function (t) {
+    if (t.date && t.date.length >= 7) set.add(t.date.slice(0, 7));
+  });
+  return Array.from(set).sort().reverse();
+}
+
+function ensureSelectedMonth(months) {
+  if (selectedMonth === "all") return;
+  if (selectedMonth && months.indexOf(selectedMonth) !== -1) return;
+
+  const currentMonth = todayISO().slice(0, 7);
+  selectedMonth = months.indexOf(currentMonth) !== -1 ? currentMonth : (months[0] || "all");
+}
+
+// Transactions in the chosen period.
+function visibleTransactions() {
+  if (selectedMonth === "all") return transactions.slice();
+  return transactions.filter(function (t) { return t.date.slice(0, 7) === selectedMonth; });
+}
+
+// Period + search box filter (used by the History table only).
+function tableTransactions() {
+  let rows = visibleTransactions();
+
+  if (searchQuery) {
+    rows = rows.filter(function (t) {
+      return (t.merchant + " " + t.category).toLowerCase().indexOf(searchQuery) !== -1;
+    });
+  }
+
+  return rows.sort(function (a, b) { return b.date.localeCompare(a.date); });
+}
+
+function renderMonthOptions() {
+  const months = availableMonths();
+  ensureSelectedMonth(months);
+
+  const select = $("monthSelect");
+  let html = '<option value="all">All time</option>';
+  months.forEach(function (month) {
+    html += '<option value="' + month + '">' + monthLabel(month) + "</option>";
+  });
+  select.innerHTML = html;
+  select.value = selectedMonth;
+}
+
+function renderSummary() {
+  const rows = visibleTransactions();
+  const debits = rows.filter(function (t) { return t.type === "debit"; });
+  const credits = rows.filter(function (t) { return t.type === "credit"; });
+
+  const spent = debits.reduce(function (sum, t) { return sum + t.amount; }, 0);
+  const received = credits.reduce(function (sum, t) { return sum + t.amount; }, 0);
+  const net = received - spent;
+  const period = selectedMonth === "all" ? "All time" : monthLabel(selectedMonth);
+
+  $("spentTotal").textContent = inr(spent);
+  $("spentSub").textContent = debits.length
+    ? debits.length + " payment" + (debits.length === 1 ? "" : "s") + " · " + period
+    : "No spending in this period";
+
+  $("receivedTotal").textContent = inr(received);
+  $("receivedSub").textContent = credits.length
+    ? credits.length + " credit" + (credits.length === 1 ? "" : "s") + " · " + period
+    : "No money received in this period";
+
+  $("miniNet").textContent = inr(net);
+  $("miniNetSub").textContent = rows.length
+    ? (net >= 0 ? "Received more than spent" : "Spent more than received")
+    : "No transactions yet";
+
+  $("railNet").textContent = inr(net);
+  $("railNetSub").textContent = rows.length ? "Net for " + period : "No transactions yet";
+  $("balancePeriod").textContent = period;
+
+  $("cardSpent").textContent = inr(spent);
+  $("cardPeriod").textContent = period;
+  $("cardCount").textContent = debits.length + " payment" + (debits.length === 1 ? "" : "s");
+
+  $("bellCount").textContent = rows.length;
+  $("subGreeting").textContent = period + " · " + rows.length + " transaction" + (rows.length === 1 ? "" : "s");
+}
+
+// Donut = how big the biggest category is, compared to all spending.
+function renderDonut() {
+  const spends = visibleTransactions().filter(function (t) { return t.type === "debit"; });
+  const totals = {};
+
+  spends.forEach(function (t) {
+    totals[t.category] = (totals[t.category] || 0) + t.amount;
+  });
+
+  const entries = Object.entries(totals).sort(function (a, b) { return b[1] - a[1]; });
+  const total = entries.reduce(function (sum, pair) { return sum + pair[1]; }, 0);
+
+  if (!entries.length) {
+    $("donutFill").setAttribute("stroke-dasharray", "0 100");
+    $("donutLabel").textContent = "0%";
+    $("donutCap").textContent = "No spending";
+    $("topCat").textContent = "—";
+    $("topCatSub").textContent = "No data yet";
+    return;
+  }
+
+  const category = entries[0][0];
+  const amount = entries[0][1];
+  const share = (amount / total) * 100;
+
+  $("donutFill").setAttribute("stroke-dasharray", share.toFixed(1) + " " + (100 - share).toFixed(1));
+  $("donutLabel").textContent = Math.round(share) + "%";
+  $("donutCap").textContent = category;
+  $("topCat").textContent = category;
+  $("topCatSub").textContent = Math.round(share) + "% of spend · " + inr(amount);
+}
+
+// Little bars = money received in each of the last 6 months.
+function renderMiniBars() {
+  const months = availableMonths().slice(0, 6).reverse();
+
+  if (!months.length) {
+    $("miniBars").innerHTML = '<p class="empty">No data yet.</p>';
+    return;
+  }
+
+  const values = months.map(function (month) {
+    return transactions
+      .filter(function (t) { return t.type === "credit" && t.date.slice(0, 7) === month; })
+      .reduce(function (sum, t) { return sum + t.amount; }, 0);
+  });
+
+  const max = Math.max.apply(null, values.concat([1]));
+
+  $("miniBars").innerHTML = months.map(function (month, i) {
+    const height = Math.max(6, (values[i] / max) * 100);
+    const cls = month === selectedMonth ? "mini-bar current" : "mini-bar";
+    return '<span class="' + cls + '" style="height:' + height.toFixed(1) + '%" title="' +
+      monthLabel(month) + ": " + inr(values[i]) + '"></span>';
+  }).join("");
+}
+
+// Area chart: spending per day (one month) or per month (all time).
+function renderTrend() {
+  const spends = visibleTransactions().filter(function (t) { return t.type === "debit"; });
+  const labels = [];
+  const values = [];
+
+  if (selectedMonth === "all") {
+    const months = availableMonths().slice(0, 12).reverse();
+    months.forEach(function (month) {
+      labels.push(monthShort(month));
+      values.push(spends
+        .filter(function (t) { return t.date.slice(0, 7) === month; })
+        .reduce(function (sum, t) { return sum + t.amount; }, 0));
+    });
+    $("trendCaption").textContent = "Monthly spending · last " + months.length + " month(s)";
+  } else {
+    const days = daysInMonth(selectedMonth);
+    for (let day = 1; day <= days; day++) {
+      labels.push(String(day));
+      values.push(spends
+        .filter(function (t) { return t.date === selectedMonth + "-" + pad(day); })
+        .reduce(function (sum, t) { return sum + t.amount; }, 0));
+    }
+    $("trendCaption").textContent = "Daily spending · " + monthLabel(selectedMonth);
+  }
+
+  if (!values.length) {
+    $("trendChart").innerHTML = '<p class="empty">No data yet.</p>';
+    return;
+  }
+
+  // Chart drawing area (in SVG units)
+  const W = 600, H = 230, padL = 46, padR = 14, padT = 14, padB = 32;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const max = Math.max.apply(null, values.concat([1]));
+  const count = values.length;
+  const stepX = count > 1 ? innerW / (count - 1) : 0;
+
+  const x = function (i) { return padL + i * stepX; };
+  const y = function (value) { return padT + innerH - (value / max) * innerH; };
+
+  const coords = values.map(function (value, i) { return [x(i), y(value)]; });
+  const linePath = "M" + coords.map(function (c) {
+    return c[0].toFixed(1) + "," + c[1].toFixed(1);
+  }).join(" L");
+  const baseY = (padT + innerH).toFixed(1);
+  const areaPath = linePath +
+    " L" + coords[coords.length - 1][0].toFixed(1) + "," + baseY +
+    " L" + coords[0][0].toFixed(1) + "," + baseY + " Z";
+
+  // Horizontal grid + value labels
+  let grid = "";
+  [0, 0.5, 1].forEach(function (frac) {
+    const gy = padT + innerH - frac * innerH;
+    grid += '<line class="grid" x1="' + padL + '" y1="' + gy.toFixed(1) +
+      '" x2="' + (W - padR) + '" y2="' + gy.toFixed(1) + '"></line>';
+    grid += '<text class="axis" x="' + (padL - 8) + '" y="' + (gy + 3.5).toFixed(1) +
+      '" text-anchor="end">' + shortMoney(max * frac) + "</text>";
+  });
+
+  // A few date labels along the bottom
+  const stride = Math.max(1, Math.ceil(count / 6));
+  let xLabels = "";
+  for (let i = 0; i < count; i += stride) {
+    xLabels += '<text class="axis" x="' + x(i).toFixed(1) + '" y="' + (H - 10) +
+      '" text-anchor="middle">' + labels[i] + "</text>";
+  }
+  if ((count - 1) % stride !== 0) {
+    xLabels += '<text class="axis" x="' + x(count - 1).toFixed(1) + '" y="' + (H - 10) +
+      '" text-anchor="middle">' + labels[count - 1] + "</text>";
+  }
+
+  const last = coords[coords.length - 1];
+
+  $("trendChart").innerHTML =
+    '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Spending trend">' +
+      "<defs>" +
+        '<linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%" stop-color="#d7ff4f" stop-opacity=".38"></stop>' +
+          '<stop offset="100%" stop-color="#d7ff4f" stop-opacity="0"></stop>' +
+        "</linearGradient>" +
+        '<linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0%" stop-color="#d7ff4f"></stop>' +
+          '<stop offset="100%" stop-color="#2fe3c7"></stop>' +
+        "</linearGradient>" +
+      "</defs>" +
+      grid +
+      '<path d="' + areaPath + '" fill="url(#areaGrad)"></path>' +
+      '<path d="' + linePath + '" fill="none" stroke="url(#lineGrad)" stroke-width="2.5" ' +
+        'stroke-linecap="round" stroke-linejoin="round"></path>' +
+      '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="4" fill="#d7ff4f"></circle>' +
+      xLabels +
+    "</svg>";
+}
+
+// Horizontal bars: how much each category cost this period.
+function renderChart() {
+  const spends = visibleTransactions().filter(function (t) { return t.type === "debit"; });
+  const totals = {};
+
+  spends.forEach(function (t) {
+    totals[t.category] = (totals[t.category] || 0) + t.amount;
+  });
+
+  const entries = Object.entries(totals).sort(function (a, b) { return b[1] - a[1]; });
+  const total = entries.reduce(function (sum, pair) { return sum + pair[1]; }, 0);
+
+  if (!entries.length) {
+    $("chart").innerHTML = '<p class="empty">No spending in this period yet.</p>';
+    return;
+  }
+
+  $("chart").innerHTML = entries.map(function (pair) {
+    const category = pair[0];
+    const amount = pair[1];
+    const percent = total ? Math.round((amount / total) * 100) : 0;
+    const width = Math.max(4, (amount / entries[0][1]) * 100);
+    const color = CATEGORY_COLORS[category] || "#8c8e9b";
+
+    return '<div class="bar-row">' +
+      '<div class="bar-top"><b>' + escapeHtml(category) + "</b>" +
+      "<span>" + inr(amount) + " · " + percent + "%</span></div>" +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + width + "%;background:" + color + '"></div></div>' +
+      "</div>";
+  }).join("");
+}
+
+// One row of the History table.
+function rowHTML(t) {
+  const color = CATEGORY_COLORS[t.category] || "#8c8e9b";
+  const letter = escapeHtml((String(t.merchant).charAt(0) || "?").toUpperCase());
+  const sign = t.type === "credit" ? "+" : "−";
+
+  const options = CATEGORIES.map(function (c) {
+    return '<option' + (c === t.category ? " selected" : "") + ">" + escapeHtml(c) + "</option>";
+  }).join("");
+
+  return "<tr>" +
+    '<td data-label="Transaction"><div class="tx-cell">' +
+      '<span class="tx-icon" style="background:' + color + '26;color:' + color + '">' + letter + "</span>" +
+      '<span class="tx-text"><b>' + escapeHtml(t.merchant) + "</b>" +
+      "<small>" + escapeHtml(t.category) + "</small></span>" +
+    "</div></td>" +
+    '<td data-label="Type"><span class="tag ' + t.type + '">' + t.type + "</span>" +
+      (t.auto ? ' <span class="tag auto" title="Added automatically from SMS">auto</span>' : "") + "</td>" +
+    '<td data-label="Amount" class="amount ' + t.type + '">' + sign + inr(t.amount) + "</td>" +
+    '<td data-label="Date">' + prettyDate(t.date) + "</td>" +
+    '<td data-label="Category"><select class="cat-select" data-id="' + t.id + '" aria-label="Change category">' +
+      options + "</select></td>" +
+    '<td class="actions"><button class="icon-btn danger" type="button" data-del="' + t.id + '" ' +
+      'title="Delete" aria-label="Delete this transaction">✕</button></td>' +
+    "</tr>";
+}
+
+function renderTable() {
+  const rows = tableTransactions();
+
+  $("txCount").textContent = rows.length + " transaction" + (rows.length === 1 ? "" : "s");
+  $("tableWrap").hidden = rows.length === 0;
+  $("emptyState").hidden = rows.length > 0;
+
+  if (!rows.length) {
+    if (searchQuery) {
+      $("emptyState").textContent = "No transactions match “" + searchQuery + "”.";
+    } else if (transactions.length) {
+      $("emptyState").textContent = "No transactions in this period. Try “All time” in the period picker.";
+    } else {
+      $("emptyState").textContent = "Nothing here yet. Paste a message in AI import or add one manually.";
+    }
+    $("txBody").innerHTML = "";
+    return;
+  }
+
+  $("txBody").innerHTML = rows.map(rowHTML).join("");
+}
+
+// Small list in the right rail.
+function renderRecent() {
+  const rows = visibleTransactions().sort(function (a, b) {
+    return b.date.localeCompare(a.date);
+  }).slice(0, 5);
+
+  $("recentCount").textContent = rows.length;
+
+  if (!rows.length) {
+    $("recentList").innerHTML = '<p class="empty">Nothing here yet.</p>';
+    return;
+  }
+
+  $("recentList").innerHTML = rows.map(function (t) {
+    const color = CATEGORY_COLORS[t.category] || "#8c8e9b";
+    const letter = escapeHtml((String(t.merchant).charAt(0) || "?").toUpperCase());
+    const sign = t.type === "credit" ? "+" : "−";
+    const amountClass = t.type === "credit" ? "amount credit" : "amount debit";
+
+    return '<div class="recent-item">' +
+      '<span class="recent-icon" style="background:' + color + '26;color:' + color + '">' + letter + "</span>" +
+      '<div class="recent-main"><b>' + escapeHtml(t.merchant) + "</b>" +
+      "<small>" + escapeHtml(t.category) + " · " + prettyDate(t.date) + "</small></div>" +
+      '<div class="recent-right"><b class="' + amountClass + '">' + sign + inr(t.amount) + "</b>" +
+      "<small>" + t.type + (t.auto ? " · auto" : "") + "</small></div>" +
+      '<div class="recent-actions">' +
+        '<button class="recent-btn" type="button" data-edit="' + t.id + '" ' +
+        'title="Edit" aria-label="Edit this transaction">✎</button>' +
+        '<button class="recent-btn danger" type="button" data-del="' + t.id + '" ' +
+        'title="Delete" aria-label="Delete this transaction">✕</button>' +
+      "</div>" +
+      "</div>";
+  }).join("");
+}
+
+function renderAll() {
+  renderMonthOptions();
+  renderSummary();
+  renderDonut();
+  renderMiniBars();
+  renderTrend();
+  renderChart();
+  renderTable();
+  renderRecent();
+}
+/* =========================================================
+   6. MODALS (dialogs)
+   ========================================================= */
+
+function openModal(id) {
+  $(id).hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function closeModal(id) {
+  $(id).hidden = true;
+
+  // Leaving the transaction dialog always returns it to "add" mode,
+  // so a cancelled edit can never bleed into the next open.
+  if (id === "addModal") editingId = null;
+
+  if (!document.querySelector(".modal:not([hidden])")) {
+    document.body.classList.remove("modal-open");
+  }
+}
+
+
+/* =========================================================
+   7. TALKING TO THE CLAUDE API
+   ========================================================= */
+
+// Show / hide the red error banner.
+function showError(message) {
+  const box = $("errorBox");
+  box.textContent = message;
+  box.hidden = false;
+}
+
+function hideError() {
+  $("errorBox").hidden = true;
+}
+
+function setStatus(message) {
+  $("status").textContent = message;
+}
+
+/* ---------------------------------------------------------
+   API key: each person saves their own in this browser
+   --------------------------------------------------------- */
+
+// Read the key saved on this device. Returns "" if there isn't one.
+function getApiKey() {
+  try {
+    return String(localStorage.getItem(KEY_STORAGE) || "").trim();
+  } catch (err) {
+    return "";
+  }
+}
+
+function setKeyMessage(message, isError) {
+  const box = $("keyMessage");
+  box.textContent = message || "";
+  box.classList.toggle("error", Boolean(isError));
+}
+
+// Keep the dots + labels in sync with whether a key exists.
+function updateKeyUI() {
+  const hasKey = Boolean(getApiKey());
+
+  $("keyDot").classList.toggle("on", hasKey);
+  $("keyBtnDot").classList.toggle("on", hasKey);
+  $("keyState").textContent = hasKey ? "Saved in this browser" : "Not added";
+  $("forgetKeyBtn").hidden = !hasKey;
+  $("keyBtn").title = hasKey ? "Your API key is saved — click to change it" : "Add your own Claude API key";
+  $("keyBtn2").title = hasKey ? "Your API key is saved — click to change it" : "Add your own Claude API key";
+}
+
+function saveApiKey() {
+  const key = $("apiKeyInput").value.trim();
+
+  if (!key) {
+    setKeyMessage("Paste your API key first.", true);
+    $("apiKeyInput").focus();
+    return;
+  }
+
+  try {
+    localStorage.setItem(KEY_STORAGE, key);
+  } catch (err) {
+    setKeyMessage("This browser blocked local storage, so the key can't be saved.", true);
+    return;
+  }
+
+  updateKeyUI();
+  setKeyMessage("Key saved. It will be remembered in this browser.");
+  setStatus("API key saved. You can categorize now.");
+}
+
+function forgetApiKey() {
+  try {
+    localStorage.removeItem(KEY_STORAGE);
+  } catch (err) { /* nothing else we can do */ }
+
+  $("apiKeyInput").value = "";
+  updateKeyUI();
+  setKeyMessage("Key removed from this browser.");
+  setStatus("API key removed.");
+}
+
+function openKeyPanel() {
+  openModal("keyPanel");
+  setTimeout(function () {
+    $("apiKeyInput").focus({ preventScroll: true });
+  }, 50);
+}
+
+// Claude should return pure JSON, but this makes us extra safe:
+// it strips code fences and finds the JSON even if there's stray text.
+function parseJSONSafe(raw) {
+  if (!raw || !raw.trim()) {
+    throw new Error("Claude returned an empty reply. Please try again.");
+  }
+
+  const cleaned = raw.trim()
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/, "")
+    .trim();
+
+  // 1) Try parsing the whole reply
+  try { return JSON.parse(cleaned); } catch (err) { /* keep trying */ }
+
+  // 2) Try the first { ... last }
+  const objStart = cleaned.indexOf("{");
+  const objEnd = cleaned.lastIndexOf("}");
+  if (objStart !== -1 && objEnd > objStart) {
+    try { return JSON.parse(cleaned.slice(objStart, objEnd + 1)); } catch (err) { /* keep trying */ }
+  }
+
+  // 3) Try the first [ ... last ]
+  const arrStart = cleaned.indexOf("[");
+  const arrEnd = cleaned.lastIndexOf("]");
+  if (arrStart !== -1 && arrEnd > arrStart) {
+    try { return JSON.parse(cleaned.slice(arrStart, arrEnd + 1)); } catch (err) { /* keep trying */ }
+  }
+
+  throw new Error("I couldn't read the AI's reply — it wasn't valid JSON. Please try again, or paste fewer messages at once.");
+}
+
+/* ---------------------------------------------------------
+   Shared AI call: turn message lines into raw transaction objects.
+   Used by both the "Categorize with AI" button and live auto-import.
+   --------------------------------------------------------- */
+const NO_API_KEY = "NO_API_KEY";
+
+async function requestCategorization(lines) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    const error = new Error("Add your Claude API key to import messages.");
+    error.code = NO_API_KEY;
+    throw error;
+  }
+
+  const today = todayISO();
+
+  // Instructions for the model. We ask for JSON only so we can parse it.
+  const systemPrompt =
+    "You are a precise data-extraction engine for Indian bank SMS alerts and receipts. " +
+    "You reply with ONLY a valid JSON object — no markdown, no code fences, no explanations.";
+
+  const userPrompt =
+    "Extract every real financial transaction from the messages below.\n\n" +
+    'Return ONLY this JSON shape (no other text):\n' +
+    '{"transactions":[{"date":"YYYY-MM-DD","merchant":"Merchant or sender","amount":450.00,"type":"debit","category":"Food"}]}\n\n' +
+    "Rules:\n" +
+    "- date: the transaction date as YYYY-MM-DD. Two-digit years mean 20xx. If no date is mentioned, use " + today + ".\n" +
+    "- amount: a positive number only. No currency symbols, no commas.\n" +
+    '- type: "debit" when money leaves the account, "credit" when money comes in.\n' +
+    "- category: exactly one of: " + CATEGORIES.join(", ") + ".\n" +
+    "- Skip anything that is not a transaction: OTPs, ads, offers, balance enquiries, failed payments, reminders.\n" +
+    '- If there are no transactions, return {"transactions":[]}.\n\n' +
+    "Messages (one per line):\n" +
+    lines.map(function (line, i) { return (i + 1) + ". " + line; }).join("\n");
+
+  let response;
+  try {
+    response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }]
+        // Note: Claude Haiku 5.5 handles thinking automatically, so we
+        // deliberately don't send temperature / top_p / top_k.
+      })
+    });
+  } catch (networkError) {
+    const error = new Error("Couldn't reach the Claude API. Check your internet connection and try again.");
+    error.kind = "claude";
+    throw error;
+  }
+
+  if (!response.ok) {
+    let apiMessage = "";
+    try {
+      const errorData = await response.json();
+      apiMessage = (errorData && errorData.error && errorData.error.message) || "";
+    } catch (err) { /* the error body wasn't JSON — ignore */ }
+
+    let message;
+    if (response.status === 401) {
+      message = "Your API key was rejected (401). Open “API key” at the top and check that you pasted the complete, active key.";
+    } else if (response.status === 403) {
+      message = "Your API key isn't allowed to use " + MODEL + " (403). Check your Anthropic account's access.";
+    } else if (response.status === 404) {
+      message = "The model “" + MODEL + "” wasn't found. Check the MODEL value at the top of the file.";
+    } else if (response.status === 429) {
+      message = "Rate limit or credit problem (429). Wait a moment, then try again.";
+    } else {
+      message = "Claude API error " + response.status + (apiMessage ? ": " + apiMessage : ".");
+    }
+
+    const error = new Error(message);
+    error.kind = "claude";
+    throw error;
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (err) {
+    const error = new Error("The API sent an unexpected response. Please try again.");
+    error.kind = "claude";
+    throw error;
+  }
+
+  // The reply can contain several blocks; keep the text ones.
+  const text = (data.content || [])
+    .filter(function (block) { return block.type === "text"; })
+    .map(function (block) { return block.text; })
+    .join("\n");
+
+  let parsed;
+  try {
+    parsed = parseJSONSafe(text);
+  } catch (err) {
+    err.kind = "claude";
+    throw err;
+  }
+
+  const list = Array.isArray(parsed) ? parsed : parsed.transactions;
+  if (!Array.isArray(list)) {
+    const error = new Error("The AI reply was missing the transactions list. Please try again.");
+    error.kind = "claude";
+    throw error;
+  }
+
+  return list;
+}
+
+// Turn raw AI objects into clean transactions, skipping junk and duplicates.
+// options.auto = true marks them with the AUTO badge.
+function storeParsedTransactions(list, options) {
+  options = options || {};
+
+  const existing = new Set(transactions.map(transactionKey));
+  const added = [];
+  let skipped = 0;
+
+  list.forEach(function (item) {
+    const transaction = buildTransaction(item);
+    if (!transaction) { skipped++; return; }
+
+    const key = transactionKey(transaction);
+    if (existing.has(key)) { skipped++; return; }
+
+    existing.add(key);
+    if (options.auto) transaction.auto = true;
+    added.push(transaction);
+  });
+
+  if (added.length) {
+    transactions = added.concat(transactions);
+    saveTransactions();
+
+    // If the current view won't show the new items, jump to their month.
+    if (selectedMonth !== "all" && !added.some(function (t) {
+      return t.date.slice(0, 7) === selectedMonth;
+    })) {
+      selectedMonth = added[0].date.slice(0, 7);
+    }
+
+    renderAll();
+  }
+
+  return { added: added.length, skipped: skipped };
+}
+
+async function handleCategorize() {
+  hideError();
+  setStatus("");
+
+  const lines = $("smsInput").value
+    .split(/\r?\n/)
+    .map(function (line) { return line.trim(); })
+    .filter(Boolean);
+
+  if (!lines.length) {
+    showError("Please paste at least one bank message or receipt first.");
+    return;
+  }
+
+  if (!getApiKey()) {
+    showError("Add your own Claude API key first — click “API key” at the top. It only takes a moment.");
+    setKeyMessage("Paste your key here, then click “Save key”.", true);
+    openKeyPanel();
+    return;
+  }
+
+  const button = $("categorizeBtn");
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = "Reading messages…";
+
+  try {
+    const list = await requestCategorization(lines);
+    const result = storeParsedTransactions(list);
+
+    if (result.added) {
+      $("smsInput").value = "";
+      setStatus("Added " + result.added + " transaction" + (result.added === 1 ? "" : "s") +
+        (result.skipped ? " · skipped " + result.skipped : "") + ".");
+    } else {
+      setStatus("No new transactions found — those look like OTPs, ads or duplicates.");
+    }
+  } catch (err) {
+    console.error(err);
+    showError(err.message || "Something went wrong. Please try again.");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalLabel;
+  }
+}
+
+
+/* =========================================================
+   LIVE AUTO-IMPORT
+   The tracker can't read SMS itself. A small helper server
+   (expense-server.py) receives messages from a forwarding app
+   on your phone, and we poll it here.
+   ========================================================= */
+
+const AUTO_STORAGE = "ai-expense-tracker-auto";
+const AUTO_POLL_MS = 8000;
+
+// Auto-import needs the local helper server (expense-server.py).
+// On a hosted copy (like GitHub Pages) there is no server, so it stays off
+// instead of failing every few seconds.
+const IS_LOCAL_HOST =
+  location.protocol === "file:" ||
+  location.hostname === "localhost" ||
+  location.hostname === "127.0.0.1" ||
+  location.hostname === "::1" ||
+  location.hostname === "[::1]";
+
+const RELAY_BASE = location.protocol === "file:"
+  ? "http://localhost:8000"
+  : (IS_LOCAL_HOST ? location.origin : "");
+
+let autoTimer = null;
+let autoBusy = false;
+
+function getAutoSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(AUTO_STORAGE) || "{}");
+    return {
+      enabled: Boolean(saved.enabled),
+      lastId: Number(saved.lastId) || 0
+    };
+  } catch (err) {
+    return { enabled: false, lastId: 0 };
+  }
+}
+
+function saveAutoSettings(settings) {
+  try {
+    localStorage.setItem(AUTO_STORAGE, JSON.stringify(settings));
+  } catch (err) { /* storage blocked — automation still works for this visit */ }
+}
+
+function setAutoStatus(text, state) {
+  const box = $("autoStatus");
+  if (!box) return;
+  box.textContent = text;
+  box.className = "auto-status" + (state ? " " + state : "");
+}
+
+async function checkAutoServer() {
+  try {
+    const response = await fetch(RELAY_BASE + "/api/health", { cache: "no-store" });
+    if (!response.ok) throw new Error("bad status");
+    const data = await response.json();
+    $("autoHint").textContent = "Connected · " + (data.count || 0) + " SMS in inbox";
+    return true;
+  } catch (err) {
+    $("autoHint").textContent = "Start expense-server.py to watch SMS";
+    return false;
+  }
+}
+
+async function autoImportTick(manual) {
+  if (autoBusy) return;
+  if (!getAutoSettings().enabled && !manual) return;
+
+  autoBusy = true;
+  if (manual) setAutoStatus("Checking…", "busy");
+
+  try {
+    const settings = getAutoSettings();
+    const response = await fetch(RELAY_BASE + "/api/sms?after=" + settings.lastId, { cache: "no-store" });
+    if (!response.ok) throw new Error("relay status " + response.status);
+
+    const data = await response.json();
+    const messages = Array.isArray(data.messages) ? data.messages : [];
+
+    if (!messages.length) {
+      setAutoStatus("Listening · no new SMS", "on");
+      $("autoHint").textContent = "Connected · waiting for bank SMS";
+      return;
+    }
+
+    if (!getApiKey()) {
+      setAutoStatus(messages.length + " SMS waiting — add API key", "warn");
+      return;
+    }
+
+    setAutoStatus("Reading " + messages.length + " SMS…", "busy");
+
+    const list = await requestCategorization(messages.map(function (m) { return m.message; }));
+    const result = storeParsedTransactions(list, { auto: true });
+
+    // Move the bookmark only AFTER a successful read, so a failed AI
+    // call is retried next time instead of losing the message.
+    const highestId = Math.max.apply(null, messages.map(function (m) { return Number(m.id) || 0; }));
+    saveAutoSettings({ enabled: true, lastId: Math.max(settings.lastId, highestId) });
+
+    if (result.added) {
+      setAutoStatus("Auto-added " + result.added + " transaction" + (result.added === 1 ? "" : "s"), "on");
+      setStatus("Auto-imported " + result.added + " from SMS. Edit any row if needed.");
+    } else {
+      setAutoStatus("New SMS had no transaction", "on");
+    }
+  } catch (err) {
+    console.warn("Auto-import:", err);
+
+    if (err && err.code === NO_API_KEY) {
+      setAutoStatus("Add your API key", "warn");
+    } else if (err && err.kind === "claude") {
+      setAutoStatus("AI error — will retry", "error");
+    } else {
+      setAutoStatus("Relay offline — run expense-server.py", "error");
+      $("autoHint").textContent = "Start expense-server.py to watch SMS";
+    }
+  } finally {
+    autoBusy = false;
+  }
+}
+
+function startAutoPolling() {
+  if (autoTimer) return;
+  autoTimer = setInterval(function () { autoImportTick(false); }, AUTO_POLL_MS);
+}
+
+function stopAutoPolling() {
+  if (!autoTimer) return;
+  clearInterval(autoTimer);
+  autoTimer = null;
+}
+
+async function enableAutoImport(enabled) {
+  if (!RELAY_BASE) return;
+
+  saveAutoSettings({ enabled: enabled, lastId: getAutoSettings().lastId });
+  $("autoCheckBtn").hidden = !enabled;
+
+  if (!enabled) {
+    stopAutoPolling();
+    setAutoStatus("Off", "");
+    return;
+  }
+
+  const ok = await checkAutoServer();
+  if (!ok) {
+    // Put the switch back: there's nothing to listen to.
+    saveAutoSettings({ enabled: false, lastId: getAutoSettings().lastId });
+    $("autoToggle").checked = false;
+    $("autoCheckBtn").hidden = true;
+    setAutoStatus("Relay offline", "error");
+    return;
+  }
+
+  setAutoStatus("Connecting…", "busy");
+  startAutoPolling();
+  autoImportTick(true);
+}
+
+
+/* =========================================================
+   8. MANUAL ENTRY + CSV EXPORT
+   ========================================================= */
+
+function handleManualSubmit(event) {
+  event.preventDefault();
+  hideError();
+
+  const amount = Number(String($("mAmount").value).replace(/,/g, ""));
+
+  if (!amount || amount <= 0) {
+    showError("Please enter an amount greater than 0.");
+    $("mAmount").focus();
+    return;
+  }
+
+  const fields = {
+    date: $("mDate").value || todayISO(),
+    merchant: $("mMerchant").value.trim() || "Manual entry",
+    amount: Math.round(amount * 100) / 100,
+    type: $("mType").value,
+    category: $("mCategory").value || "Other"
+  };
+
+  // ---- EDIT MODE: change the existing transaction in place ----
+  if (editingId) {
+    const index = transactions.findIndex(function (t) { return t.id === editingId; });
+
+    if (index !== -1) {
+      // Keep the original id so charts and lists stay consistent.
+      transactions[index] = Object.assign({}, transactions[index], fields);
+      saveTransactions();
+
+      // If the date moved to another month, follow it.
+      if (selectedMonth !== "all") selectedMonth = fields.date.slice(0, 7);
+
+      closeModal("addModal");
+      editingId = null;
+      renderAll();
+      setStatus("Transaction updated.");
+      return;
+    }
+
+    // The transaction vanished (deleted elsewhere) — fall through to add mode.
+    editingId = null;
+  }
+
+  // ---- ADD MODE ----
+  const transaction = Object.assign({ id: uid() }, fields);
+
+  transactions.unshift(transaction);
+  saveTransactions();
+
+  // Show the month this transaction belongs to.
+  if (selectedMonth !== "all") selectedMonth = transaction.date.slice(0, 7);
+
+  // Reset the form and close the dialog for the next entry.
+  $("manualForm").reset();
+  $("mDate").value = todayISO();
+  $("mCategory").value = "Other";
+  closeModal("addModal");
+
+  renderAll();
+  setStatus("Transaction added.");
+}
+
+function csvCell(value) {
+  const text = String(value == null ? "" : value);
+  return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+}
+
+function exportCSV() {
+  if (!transactions.length) {
+    setStatus("Nothing to export yet.");
+    return;
+  }
+
+  const rows = transactions.slice().sort(function (a, b) {
+    return b.date.localeCompare(a.date);
+  });
+
+  const lines = [["Date", "Merchant", "Amount", "Type", "Category"]];
+  rows.forEach(function (t) {
+    lines.push([t.date, t.merchant, Number(t.amount).toFixed(2), t.type, t.category]);
+  });
+
+  const csv = lines.map(function (row) {
+    return row.map(csvCell).join(",");
+  }).join("\r\n");
+
+  // The BOM helps Excel open Indian text correctly.
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "expenses-" + todayISO() + ".csv";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+
+  setStatus("CSV downloaded.");
+}
+
+
+/* =========================================================
+   9. EVENT LISTENERS
+   ========================================================= */
+
+$("categorizeBtn").addEventListener("click", handleCategorize);
+$("exportBtn").addEventListener("click", exportCSV);
+$("manualForm").addEventListener("submit", handleManualSubmit);
+
+// API key dialog
+$("keyBtn").addEventListener("click", openKeyPanel);
+$("keyBtn2").addEventListener("click", openKeyPanel);
+$("saveKeyBtn").addEventListener("click", saveApiKey);
+$("forgetKeyBtn").addEventListener("click", forgetApiKey);
+$("apiKeyInput").addEventListener("keydown", function (event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    saveApiKey();
+  }
+});
+
+// Add transaction dialog (resets the form so it always starts clean)
+function openAddModal() {
+  editingId = null;
+  $("addTitle").textContent = "Add transaction";
+  $("addHint").textContent = "For cash spends or anything the SMS missed.";
+  $("addSubmitBtn").textContent = "Add transaction";
+  $("manualForm").reset();
+  $("mDate").value = todayISO();
+  $("mType").value = "debit";
+  $("mCategory").value = "Other";
+
+  openModal("addModal");
+  setTimeout(function () {
+    $("mAmount").focus({ preventScroll: true });
+  }, 50);
+}
+
+// Edit transaction dialog: same form, filled with the chosen transaction.
+function openEditModal(id) {
+  const transaction = transactions.find(function (t) { return t.id === id; });
+  if (!transaction) return;
+
+  editingId = id;
+  $("addTitle").textContent = "Edit transaction";
+  $("addHint").textContent = "Change anything you like, then save.";
+  $("addSubmitBtn").textContent = "Save changes";
+
+  $("mDate").value = transaction.date;
+  $("mAmount").value = transaction.amount;
+  $("mMerchant").value = transaction.merchant;
+  $("mType").value = transaction.type;
+  $("mCategory").value = transaction.category;
+
+  openModal("addModal");
+  setTimeout(function () {
+    $("mAmount").focus({ preventScroll: true });
+  }, 50);
+}
+
+$("addBtn").addEventListener("click", openAddModal);
+$("addBtn2").addEventListener("click", openAddModal);
+
+// Action buttons in the Recent activity list (event delegation: one listener)
+$("recentList").addEventListener("click", function (event) {
+  // ✎ Edit
+  const editButton = event.target.closest("[data-edit]");
+  if (editButton) {
+    openEditModal(editButton.getAttribute("data-edit"));
+    return;
+  }
+
+  // ✕ Delete
+  const deleteButton = event.target.closest("[data-del]");
+  if (deleteButton) {
+    const id = deleteButton.getAttribute("data-del");
+    transactions = transactions.filter(function (t) { return t.id !== id; });
+    saveTransactions();
+    renderAll();
+    setStatus("Transaction deleted.");
+  }
+});
+
+// Close dialogs: X button, clicking the dark background, or Escape
+document.querySelectorAll("[data-close]").forEach(function (button) {
+  button.addEventListener("click", function () {
+    closeModal(button.closest(".modal").id);
+  });
+});
+document.querySelectorAll(".modal").forEach(function (modal) {
+  modal.addEventListener("click", function (event) {
+    if (event.target === modal) closeModal(modal.id);
+  });
+});
+document.addEventListener("keydown", function (event) {
+  if (event.key === "Escape") {
+    document.querySelectorAll(".modal").forEach(function (modal) { closeModal(modal.id); });
+  }
+});
+
+// Bell icon jumps to the transactions list
+$("bellBtn").addEventListener("click", function () {
+  $("history").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+// Search box filters the History table only
+$("searchInput").addEventListener("input", function (event) {
+  searchQuery = event.target.value.trim().toLowerCase();
+  renderTable();
+});
+
+// Changing the period updates the cards, charts and table together
+$("monthSelect").addEventListener("change", function (event) {
+  selectedMonth = event.target.value;
+  renderSummary();
+  renderDonut();
+  renderMiniBars();
+  renderTrend();
+  renderChart();
+  renderTable();
+  renderRecent();
+});
+
+// Category dropdown inside the table (event delegation: one listener for all rows)
+$("txBody").addEventListener("change", function (event) {
+  if (!event.target.classList.contains("cat-select")) return;
+
+  const id = event.target.getAttribute("data-id");
+  const transaction = transactions.find(function (t) { return t.id === id; });
+  if (!transaction) return;
+
+  transaction.category = event.target.value;
+  saveTransactions();
+
+  renderSummary();
+  renderDonut();
+  renderChart();
+  setStatus("Category updated.");
+});
+
+// Delete button inside the table
+$("txBody").addEventListener("click", function (event) {
+  const button = event.target.closest("[data-del]");
+  if (!button) return;
+
+  const id = button.getAttribute("data-del");
+  transactions = transactions.filter(function (t) { return t.id !== id; });
+  saveTransactions();
+  renderAll();
+  setStatus("Transaction deleted.");
+});
+
+// Sidebar links highlight the section you clicked
+document.querySelectorAll(".nav-item").forEach(function (link) {
+  link.addEventListener("click", function () {
+    document.querySelectorAll(".nav-item").forEach(function (item) {
+      item.classList.remove("active");
+    });
+    link.classList.add("active");
+  });
+});
+
+// Fill the box with realistic test messages (includes one OTP and one ad)
+$("sampleBtn").addEventListener("click", function () {
+  $("smsInput").value = [
+    "Rs.450.00 debited from A/c XX1234 at SWIGGY on 03-11-26. UPI Ref 123456789.",
+    "INR 1,299.50 spent on HDFC Bank Card XX5678 at Reliance SMART on 04-11-26.",
+    "Your OTP for login is 483920. Do not share it with anyone.",
+    "Rs.25,000.00 credited to A/c XX1234 from ACME SALARY on 01-11-26.",
+    "Paid Rs.180 to Uber India via UPI on 05-11-26.",
+    "Get 50% off on Amazon this weekend! Shop now."
+  ].join("\n");
+
+  $("smsInput").focus();
+  setStatus("Sample loaded. Hit “Categorize with AI”.");
+});
+
+
+/* =========================================================
+   10. START THE APP
+   ========================================================= */
+
+// Load this person's saved key (if any) into the dialog.
+const savedKey = getApiKey();
+$("apiKeyInput").value = savedKey;
+updateKeyUI();
+if (!savedKey) openKeyPanel();
+
+// Fill the category dropdown in the add form from CATEGORIES.
+$("mCategory").innerHTML = CATEGORIES.map(function (category) {
+  return '<option value="' + escapeHtml(category) + '">' + escapeHtml(category) + "</option>";
+}).join("");
+
+$("mDate").value = todayISO();
+$("mCategory").value = "Other";
+$("mType").value = "debit";
+
+// ---- Live auto-import wiring ----
+$("autoToggle").addEventListener("change", function (event) {
+  enableAutoImport(event.target.checked);
+});
+$("autoCheckBtn").addEventListener("click", function () {
+  autoImportTick(true);
+});
+
+// Restore the switch from last time and see if the relay is running.
+const savedAuto = getAutoSettings();
+
+if (!RELAY_BASE) {
+  // Hosted copy (e.g. GitHub Pages): there is no local server to talk to.
+  $("autoToggle").checked = false;
+  $("autoToggle").disabled = true;
+  $("autoCheckBtn").hidden = true;
+  $("autoHint").textContent = "Local app only — run expense-server.py";
+  setAutoStatus("Local only", "");
+} else {
+  $("autoToggle").checked = savedAuto.enabled;
+  $("autoCheckBtn").hidden = !savedAuto.enabled;
+
+  checkAutoServer().then(function (ok) {
+    if (!savedAuto.enabled) {
+      setAutoStatus(ok ? "Ready" : "Off", ok ? "on" : "");
+    }
+  });
+
+  if (savedAuto.enabled) {
+    startAutoPolling();
+    autoImportTick(true);
+  }
+}
+
+// Draw everything from localStorage.
+renderAll();
+</script>
+</body>
+</html>

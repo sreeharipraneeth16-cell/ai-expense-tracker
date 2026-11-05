@@ -1,0 +1,6 @@
+expense-tracker-inbox.json
+sms-inbox.json
+*.log
+.DS_Store
+Thumbs.db
+__pycache__/
