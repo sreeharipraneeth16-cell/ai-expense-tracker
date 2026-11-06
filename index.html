@@ -329,6 +329,45 @@
   .auto-status.error::before { background: var(--red); }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 
+  /* ---- Scan a bill (photo) ---- */
+  .scan-panel {
+    display: flex; flex-direction: column; gap: 10px;
+    margin-top: 14px;
+  }
+  .scan-drop {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px;
+    border: 1px dashed #34343f; border-radius: 12px;
+    background: #101013; cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .scan-drop:hover, .scan-drop.drag, .scan-drop:focus-within {
+    border-color: rgba(215, 255, 79, .5);
+    background: rgba(215, 255, 79, .04);
+  }
+  .scan-icon { font-size: 20px; line-height: 1; flex: none; }
+  .scan-text b { display: block; font-size: 13.5px; }
+  .scan-text small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+
+  .bill-preview { position: relative; align-self: flex-start; max-width: 100%; }
+  .bill-preview img {
+    display: block; max-height: 150px; max-width: 100%;
+    border: 1px solid var(--line); border-radius: 10px;
+  }
+  .bill-preview .icon-btn {
+    position: absolute; top: 6px; right: 6px;
+    width: 26px; height: 26px;
+    background: rgba(0, 0, 0, .65); border-color: rgba(255, 255, 255, .18);
+    color: #fff;
+  }
+
+  .scan-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .scan-status { font-size: 12px; color: var(--muted); }
+  .scan-status.on { color: var(--green); }
+  .scan-status.warn { color: var(--amber); }
+  .scan-status.error { color: var(--red); }
+  .scan-status.busy { color: var(--lime); }
+
   /* ============ 6. STAT CARDS ============ */
   .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; scroll-margin-top: 16px; }
   .stat-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
@@ -432,6 +471,7 @@
   .tag.debit { background: rgba(255, 107, 120, .14); color: #ff98a1; }
   .tag.credit { background: rgba(74, 222, 128, .14); color: #86efac; }
   .tag.auto { background: rgba(47, 227, 199, .14); color: #7ff2e0; }
+  .tag.photo { background: rgba(167, 139, 250, .16); color: #cdb9ff; }
 
   .amount { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .amount.debit { color: #ff98a1; }
@@ -737,6 +777,28 @@
           <button id="categorizeBtn" class="btn primary" type="button">✦ Categorize with AI</button>
           <button id="sampleBtn" class="btn ghost" type="button">Load sample</button>
           <span id="status" class="status" role="status" aria-live="polite"></span>
+        </div>
+
+        <!-- Scan a bill: photo → Claude reads it → transaction -->
+        <div class="scan-panel">
+          <label class="scan-drop" id="billDrop" for="billInput">
+            <span class="scan-icon" aria-hidden="true">📷</span>
+            <span class="scan-text">
+              <b>Scan a bill or receipt</b>
+              <small>Take a photo or drop an image — Claude fills in the amount, shop and date.</small>
+            </span>
+            <input id="billInput" type="file" accept="image/*" capture="environment" hidden />
+          </label>
+
+          <div class="bill-preview" id="billPreview" hidden>
+            <img id="billImg" alt="Bill preview" />
+            <button class="icon-btn" id="billClear" type="button" title="Remove photo" aria-label="Remove photo">✕</button>
+          </div>
+
+          <div class="scan-actions">
+            <button id="scanBtn" class="btn primary" type="button" disabled>🪄 Scan bill</button>
+            <span id="scanStatus" class="scan-status" role="status" aria-live="polite">No photo yet.</span>
+          </div>
         </div>
 
         <!-- Live auto-import: watches the local server for bank SMS -->
@@ -1502,7 +1564,8 @@ function rowHTML(t) {
       "<small>" + escapeHtml(t.category) + "</small></span>" +
     "</div></td>" +
     '<td data-label="Type"><span class="tag ' + t.type + '">' + t.type + "</span>" +
-      (t.auto ? ' <span class="tag auto" title="Added automatically from SMS">auto</span>' : "") + "</td>" +
+      (t.auto ? ' <span class="tag auto" title="Added automatically from SMS">auto</span>' : "") +
+      (t.photo ? ' <span class="tag photo" title="Scanned from a bill photo">photo</span>' : "") + "</td>" +
     '<td data-label="Amount" class="amount ' + t.type + '">' + sign + inr(t.amount) + "</td>" +
     '<td data-label="Date">' + prettyDate(t.date) + "</td>" +
     '<td data-label="Category"><select class="cat-select" data-id="' + t.id + '" aria-label="Change category">' +
@@ -1558,7 +1621,7 @@ function renderRecent() {
       '<div class="recent-main"><b>' + escapeHtml(t.merchant) + "</b>" +
       "<small>" + escapeHtml(t.category) + " · " + prettyDate(t.date) + "</small></div>" +
       '<div class="recent-right"><b class="' + amountClass + '">' + sign + inr(t.amount) + "</b>" +
-      "<small>" + t.type + (t.auto ? " · auto" : "") + "</small></div>" +
+      "<small>" + t.type + (t.auto ? " · auto" : "") + (t.photo ? " · photo" : "") + "</small></div>" +
       '<div class="recent-actions">' +
         '<button class="recent-btn" type="button" data-edit="' + t.id + '" ' +
         'title="Edit" aria-label="Edit this transaction">✎</button>' +
@@ -1723,39 +1786,19 @@ function parseJSONSafe(raw) {
 }
 
 /* ---------------------------------------------------------
-   Shared AI call: turn message lines into raw transaction objects.
-   Used by both the "Categorize with AI" button and live auto-import.
+   Shared AI call: send content to Claude and get parsed JSON back.
+   `content` is a prompt string, or an array of content blocks
+   (text + image) for photo scanning.
    --------------------------------------------------------- */
 const NO_API_KEY = "NO_API_KEY";
 
-async function requestCategorization(lines) {
+async function requestClaudeJSON(content, systemPrompt, maxTokens) {
   const apiKey = getApiKey();
   if (!apiKey) {
     const error = new Error("Add your Claude API key to import messages.");
     error.code = NO_API_KEY;
     throw error;
   }
-
-  const today = todayISO();
-
-  // Instructions for the model. We ask for JSON only so we can parse it.
-  const systemPrompt =
-    "You are a precise data-extraction engine for Indian bank SMS alerts and receipts. " +
-    "You reply with ONLY a valid JSON object — no markdown, no code fences, no explanations.";
-
-  const userPrompt =
-    "Extract every real financial transaction from the messages below.\n\n" +
-    'Return ONLY this JSON shape (no other text):\n' +
-    '{"transactions":[{"date":"YYYY-MM-DD","merchant":"Merchant or sender","amount":450.00,"type":"debit","category":"Food"}]}\n\n' +
-    "Rules:\n" +
-    "- date: the transaction date as YYYY-MM-DD. Two-digit years mean 20xx. If no date is mentioned, use " + today + ".\n" +
-    "- amount: a positive number only. No currency symbols, no commas.\n" +
-    '- type: "debit" when money leaves the account, "credit" when money comes in.\n' +
-    "- category: exactly one of: " + CATEGORIES.join(", ") + ".\n" +
-    "- Skip anything that is not a transaction: OTPs, ads, offers, balance enquiries, failed payments, reminders.\n" +
-    '- If there are no transactions, return {"transactions":[]}.\n\n' +
-    "Messages (one per line):\n" +
-    lines.map(function (line, i) { return (i + 1) + ". " + line; }).join("\n");
 
   let response;
   try {
@@ -1769,9 +1812,9 @@ async function requestCategorization(lines) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 4096,
+        max_tokens: maxTokens || 4096,
         system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }]
+        messages: [{ role: "user", content: content }]
         // Note: Claude Haiku 5.5 handles thinking automatically, so we
         // deliberately don't send temperature / top_p / top_k.
       })
@@ -1796,6 +1839,8 @@ async function requestCategorization(lines) {
       message = "Your API key isn't allowed to use " + MODEL + " (403). Check your Anthropic account's access.";
     } else if (response.status === 404) {
       message = "The model “" + MODEL + "” wasn't found. Check the MODEL value at the top of the file.";
+    } else if (response.status === 413) {
+      message = "That photo is too large (413). Try a smaller photo.";
     } else if (response.status === 429) {
       message = "Rate limit or credit problem (429). Wait a moment, then try again.";
     } else {
@@ -1822,15 +1867,39 @@ async function requestCategorization(lines) {
     .map(function (block) { return block.text; })
     .join("\n");
 
-  let parsed;
   try {
-    parsed = parseJSONSafe(text);
+    return parseJSONSafe(text);
   } catch (err) {
     err.kind = "claude";
     throw err;
   }
+}
 
+async function requestCategorization(lines) {
+  const today = todayISO();
+
+  // Instructions for the model. We ask for JSON only so we can parse it.
+  const systemPrompt =
+    "You are a precise data-extraction engine for Indian bank SMS alerts and receipts. " +
+    "You reply with ONLY a valid JSON object — no markdown, no code fences, no explanations.";
+
+  const userPrompt =
+    "Extract every real financial transaction from the messages below.\n\n" +
+    'Return ONLY this JSON shape (no other text):\n' +
+    '{"transactions":[{"date":"YYYY-MM-DD","merchant":"Merchant or sender","amount":450.00,"type":"debit","category":"Food"}]}\n\n' +
+    "Rules:\n" +
+    "- date: the transaction date as YYYY-MM-DD. Two-digit years mean 20xx. If no date is mentioned, use " + today + ".\n" +
+    "- amount: a positive number only. No currency symbols, no commas.\n" +
+    '- type: "debit" when money leaves the account, "credit" when money comes in.\n' +
+    "- category: exactly one of: " + CATEGORIES.join(", ") + ".\n" +
+    "- Skip anything that is not a transaction: OTPs, ads, offers, balance enquiries, failed payments, reminders.\n" +
+    '- If there are no transactions, return {"transactions":[]}.\n\n' +
+    "Messages (one per line):\n" +
+    lines.map(function (line, i) { return (i + 1) + ". " + line; }).join("\n");
+
+  const parsed = await requestClaudeJSON(userPrompt, systemPrompt, 4096);
   const list = Array.isArray(parsed) ? parsed : parsed.transactions;
+
   if (!Array.isArray(list)) {
     const error = new Error("The AI reply was missing the transactions list. Please try again.");
     error.kind = "claude";
@@ -1838,6 +1907,42 @@ async function requestCategorization(lines) {
   }
 
   return list;
+}
+
+// Photo → one transaction. Claude reads the bill image directly.
+async function requestReceiptScan(base64, mediaType) {
+  const today = todayISO();
+
+  const systemPrompt =
+    "You are a precise data-extraction engine for shop bills and payment receipts. " +
+    "You reply with ONLY a valid JSON object — no markdown, no code fences, no explanations.";
+
+  const userPrompt =
+    "Read this bill or receipt photo and extract the ONE transaction it represents.\n\n" +
+    'Return ONLY this JSON shape (no other text):\n' +
+    '{"transaction":{"date":"YYYY-MM-DD","merchant":"Shop or restaurant name","amount":450.00,"type":"debit","category":"Food"}}\n\n' +
+    "Rules:\n" +
+    "- amount: the grand total actually paid (after tax and discounts), as a positive number. No currency symbols, no commas.\n" +
+    '- merchant: the shop, restaurant or service name. If unreadable, use "Bill".\n' +
+    "- date: the bill date as YYYY-MM-DD. If no date is visible, use " + today + ".\n" +
+    '- type: always "debit" — paying a bill means money leaves the account.\n' +
+    "- category: exactly one of: " + CATEGORIES.join(", ") + ".\n" +
+    '- If the image is not a bill or receipt, return {"transaction":null}.\n' +
+    '- If the total cannot be read confidently, return {"transaction":null}.';
+
+  const content = [
+    {
+      type: "image",
+      source: { type: "base64", media_type: mediaType, data: base64 }
+    },
+    { type: "text", text: userPrompt }
+  ];
+
+  const parsed = await requestClaudeJSON(content, systemPrompt, 4096);
+  const transaction = parsed && parsed.transaction;
+
+  if (!transaction || typeof transaction !== "object") return null;
+  return transaction;
 }
 
 // Turn raw AI objects into clean transactions, skipping junk and duplicates.
@@ -1858,6 +1963,7 @@ function storeParsedTransactions(list, options) {
 
     existing.add(key);
     if (options.auto) transaction.auto = true;
+    if (options.photo) transaction.photo = true;
     added.push(transaction);
   });
 
@@ -1923,6 +2029,198 @@ async function handleCategorize() {
     button.textContent = originalLabel;
   }
 }
+
+
+/* =========================================================
+   PHOTO SCAN
+   Take a photo of a bill → shrink it in the browser → ask
+   Claude vision for one transaction.
+   ========================================================= */
+
+let billImage = null; // { base64, mediaType, dataUrl }
+
+function setScanStatus(text, state) {
+  const box = $("scanStatus");
+  if (!box) return;
+  box.textContent = text;
+  box.className = "scan-status" + (state ? " " + state : "");
+}
+
+function resetBill() {
+  billImage = null;
+  $("billInput").value = "";
+  $("billImg").removeAttribute("src");
+  $("billPreview").hidden = true;
+  $("scanBtn").disabled = true;
+  setScanStatus("No photo yet.", "");
+}
+
+// Draw the photo onto a canvas and export a smaller JPEG.
+// 1600px on the longest side is sharp enough for any bill, and keeps
+// the API request small (faster and cheaper).
+function compressBillImage(file) {
+  return new Promise(function (resolve, reject) {
+    if (!file || (file.type && !/^image\//i.test(file.type))) {
+      reject(new Error("That file isn't an image. Choose a photo of the bill."));
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = function () {
+      try {
+        const maxSide = 1600;
+        const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext("2d");
+        // White background, so transparent PNGs don't turn black in JPEG.
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        const comma = dataUrl.indexOf(",");
+
+        URL.revokeObjectURL(objectUrl);
+        resolve({
+          base64: dataUrl.slice(comma + 1),
+          mediaType: "image/jpeg",
+          dataUrl: dataUrl
+        });
+      } catch (err) {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Couldn't process that photo. Try a JPG or PNG image."));
+      }
+    };
+
+    image.onerror = function () {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Couldn't open that photo. iPhone HEIC files may not work — take a screenshot instead."));
+    };
+
+    image.src = objectUrl;
+  });
+}
+
+async function handleBillFile(file) {
+  if (!file) return;
+
+  setScanStatus("Reading photo…", "busy");
+  $("scanBtn").disabled = true;
+
+  try {
+    billImage = await compressBillImage(file);
+    $("billImg").src = billImage.dataUrl;
+    $("billPreview").hidden = false;
+    $("scanBtn").disabled = false;
+    setScanStatus("Photo ready — click “Scan bill”.", "on");
+    hideError();
+  } catch (err) {
+    console.error(err);
+    resetBill();
+    setScanStatus(err.message || "Couldn't read that photo.", "error");
+  }
+}
+
+async function scanBill() {
+  hideError();
+  setStatus("");
+
+  if (!billImage) {
+    setScanStatus("Choose a photo first.", "warn");
+    return;
+  }
+
+  if (!getApiKey()) {
+    showError("Add your own Claude API key first — click “API key” at the top.");
+    setKeyMessage("Paste your key here, then click “Save key”.", true);
+    openKeyPanel();
+    return;
+  }
+
+  const button = $("scanBtn");
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = "Reading bill…";
+  setScanStatus("Claude is reading the bill…", "busy");
+
+  try {
+    const transaction = await requestReceiptScan(billImage.base64, billImage.mediaType);
+
+    if (!transaction) {
+      setScanStatus("Couldn't find a total — try a clearer, straighter photo.", "warn");
+      return;
+    }
+
+    const result = storeParsedTransactions([transaction], { photo: true });
+
+    if (result.added) {
+      resetBill();
+      setScanStatus("Added to transactions.", "on");
+      setStatus("Bill scanned and added. Check the amount and category, then edit if needed.");
+    } else {
+      setScanStatus("That bill is already in your list.", "warn");
+    }
+  } catch (err) {
+    console.error(err);
+    setScanStatus("Scan failed — please try again.", "error");
+    showError(err.message || "Something went wrong. Please try again.");
+  } finally {
+    button.textContent = originalLabel;
+    button.disabled = !billImage;
+  }
+}
+
+// ---- photo input wiring ----
+$("billInput").addEventListener("change", function (event) {
+  handleBillFile(event.target.files && event.target.files[0]);
+});
+
+$("billClear").addEventListener("click", function (event) {
+  event.preventDefault();
+  resetBill();
+});
+
+$("scanBtn").addEventListener("click", scanBill);
+
+// Drag a photo onto the scan box.
+["dragenter", "dragover"].forEach(function (name) {
+  $("billDrop").addEventListener(name, function (event) {
+    event.preventDefault();
+    $("billDrop").classList.add("drag");
+  });
+});
+["dragleave", "drop"].forEach(function (name) {
+  $("billDrop").addEventListener(name, function (event) {
+    event.preventDefault();
+    $("billDrop").classList.remove("drag");
+  });
+});
+$("billDrop").addEventListener("drop", function (event) {
+  const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+  if (file) handleBillFile(file);
+});
+
+// Paste a screenshot or photo anywhere on the page.
+document.addEventListener("paste", function (event) {
+  const items = (event.clipboardData && event.clipboardData.items) || [];
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type && items[i].type.indexOf("image/") === 0) {
+      const file = items[i].getAsFile();
+      if (file) {
+        handleBillFile(file);
+        break;
+      }
+    }
+  }
+});
 
 
 /* =========================================================

@@ -11,6 +11,7 @@ Everything is one HTML file — no build step, no framework, no backend needed f
 ## Features
 
 - **Paste bank SMS → structured transactions.** Claude extracts the date, merchant, amount, debit/credit and category, and skips OTPs, ads and balance alerts.
+- **Scan a bill by photo.** Take a picture (or drop/paste an image) and Claude reads the shop, total, date and category — no typing.
 - **Editable table.** Change any category from a dropdown, or edit/delete from Recent activity.
 - **Summary dashboard.** Total spent/received, spending donut, daily/monthly trend chart and category bars.
 - **Manual entry** for cash spends.
@@ -29,6 +30,22 @@ Categories: Food, Groceries, Transport, Shopping, Bills & Recharge, Health, Ente
 
 > This repo contains **no API key**. Each visitor uses their own key and pays for their own usage.
 > The key is saved only in that browser and sent directly from the browser to Anthropic.
+
+---
+
+## Scan a bill (photo)
+
+No typing, no SMS needed — this works on the hosted site too.
+
+1. In **AI import**, click **Scan a bill or receipt**:
+   - on a phone, this opens the **camera** (`capture="environment"`)
+   - on a computer, pick an image file
+   - you can also **drag & drop** an image, or **paste** a screenshot
+2. Check the preview, then click **🪄 Scan bill**
+3. Claude reads the grand total, shop name, date and category and adds the transaction, marked **photo**
+4. Fix anything with **✎** in Recent activity, or the category dropdown in History
+
+Photos are **resized in your browser** (longest side 1600 px, JPEG) before upload, so requests stay small and fast. Nothing is uploaded anywhere except to Anthropic for that one request — the image is never saved by the app.
 
 ---
 
@@ -81,6 +98,7 @@ New transactions appear with an **AUTO** tag and can still be edited or deleted 
 
 - No key is stored in this repository.
 - Transactions live in your browser's `localStorage`.
+- A bill photo is shrunk locally and sent **only** to Anthropic for reading; the app never stores the image.
 - The relay's inbox is stored in your temp folder (`%TEMP%\expense-tracker-inbox.json`), outside the served folder.
 - The only network calls are to Anthropic, plus local calls to the relay.
 
@@ -92,4 +110,4 @@ New transactions appear with an **AUTO** tag and can still be edited or deleted 
 - `expense-server.py` — optional local relay: serves the app and accepts SMS at `POST /api/sms`
 - `start-expense-tracker.bat` — Windows one-click launcher
 
-Model: `claude-haiku-5-5` via the Anthropic Messages API.
+Model: `claude-haiku-5-5` via the Anthropic Messages API. Text messages and bill photos use the same model — photos are sent as base64 image blocks.
