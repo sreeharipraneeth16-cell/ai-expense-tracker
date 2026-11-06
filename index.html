@@ -785,7 +785,7 @@
             <span class="scan-icon" aria-hidden="true">📷</span>
             <span class="scan-text">
               <b>Scan a bill or receipt</b>
-              <small>Take a photo or drop an image — Claude fills in the amount, shop and date.</small>
+              <small>Take a photo or drop an image — no API key needed. Claude reads it if you have a key, otherwise it reads on your device.</small>
             </span>
             <input id="billInput" type="file" accept="image/*" capture="environment" hidden />
           </label>
@@ -797,6 +797,8 @@
 
           <div class="scan-actions">
             <button id="scanBtn" class="btn primary" type="button" disabled>🪄 Scan bill</button>
+            <button id="scanLocalBtn" class="btn ghost small" type="button" disabled
+              title="Read the photo on this device — no API key, and the photo never leaves your browser">On-device</button>
             <span id="scanStatus" class="scan-status" role="status" aria-live="polite">No photo yet.</span>
           </div>
         </div>
@@ -969,6 +971,8 @@
     <p class="key-note">
       This app doesn't include a key. Your key is saved only in this browser and sent
       directly to Anthropic &mdash; it is never written into this file.
+      <strong>Scanning a bill works without a key</strong> — a key is only needed to
+      read pasted SMS.
     </p>
 
     <div class="key-controls">
@@ -1103,6 +1107,10 @@ let searchQuery = "";
 
 // Which transaction is being edited right now (null = the dialog will ADD one).
 let editingId = null;
+
+// True when the Add dialog was opened from a scanned bill, so the saved
+// transaction keeps the "photo" badge.
+let pendingPhoto = false;
 
 function loadTransactions() {
   try {
@@ -1656,7 +1664,10 @@ function closeModal(id) {
 
   // Leaving the transaction dialog always returns it to "add" mode,
   // so a cancelled edit can never bleed into the next open.
-  if (id === "addModal") editingId = null;
+  if (id === "addModal") {
+    editingId = null;
+    pendingPhoto = false;
+  }
 
   if (!document.querySelector(".modal:not([hidden])")) {
     document.body.classList.remove("modal-open");
@@ -2046,12 +2057,17 @@ function setScanStatus(text, state) {
   box.className = "scan-status" + (state ? " " + state : "");
 }
 
+function setScanButtons(enabled) {
+  $("scanBtn").disabled = !enabled;
+  $("scanLocalBtn").disabled = !enabled;
+}
+
 function resetBill() {
   billImage = null;
   $("billInput").value = "";
   $("billImg").removeAttribute("src");
   $("billPreview").hidden = true;
-  $("scanBtn").disabled = true;
+  setScanButtons(false);
   setScanStatus("No photo yet.", "");
 }
 
@@ -2109,18 +2125,288 @@ function compressBillImage(file) {
   });
 }
 
+/* ---- On-device reading (no API key needed) ----
+   Tesseract.js runs OCR in the browser. It is loaded only the first
+   time someone scans without a key, so the page stays light. */
+
+const OCR_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+const MONTH_WORDS = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+};
+
+function loadTesseract() {
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  if (window.__ocrLoad) return window.__ocrLoad;
+
+  window.__ocrLoad = new Promise(function (resolve, reject) {
+    const script = document.createElement("script");
+    script.src = OCR_CDN;
+    script.async = true;
+    script.onload = function () {
+      if (window.Tesseract) resolve(window.Tesseract);
+      else reject(new Error("The on-device reader didn't start. Please try again."));
+    };
+    script.onerror = function () {
+      window.__ocrLoad = null; // allow a retry
+      reject(new Error("Couldn't download the on-device reader. Check your internet connection and try again."));
+    };
+    document.head.appendChild(script);
+  });
+
+  return window.__ocrLoad;
+}
+
+function safeISODate(year, month, day) {
+  if (!year || !month || !day) return null;
+  if (year < 100) year += 2000;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day) {
+    return null;
+  }
+
+  return year + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+}
+
+// Bills use many date styles; try the common ones, else use today.
+function guessDate(text) {
+  const source = String(text || "");
+
+  let match = source.match(/\b(20\d{2})[\/\-.](\d{1,2})[\/\-.](\d{1,2})\b/);
+  if (match) {
+    const iso = safeISODate(+match[1], +match[2], +match[3]);
+    if (iso) return iso;
+  }
+
+  match = source.match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})\b/);
+  if (match) {
+    let day = +match[1];
+    let month = +match[2];
+    const year = +match[3];
+    // Indian bills are usually day-first; swap only if that's impossible.
+    if (month > 12 && day <= 12) {
+      const swap = day;
+      day = month;
+      month = swap;
+    }
+    const iso = safeISODate(year, month, day);
+    if (iso) return iso;
+  }
+
+  match = source.match(/\b(\d{1,2})\s*[-\s]\s*([A-Za-z]{3,9})\.?\s*[-\s,]\s*(\d{2,4})\b/);
+  if (match) {
+    const month = MONTH_WORDS[match[2].slice(0, 3).toLowerCase()];
+    const iso = safeISODate(+match[3], month, +match[1]);
+    if (iso) return iso;
+  }
+
+  return todayISO();
+}
+
+// Numbers on a line, with dates, times, phone numbers and percentages removed.
+function numbersIn(line) {
+  const cleaned = line
+    .replace(/\b\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/g, " ")
+    .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g, " ")
+    .replace(/\b\d{10,}\b/g, " ")
+    .replace(/\b\d+(?:\.\d+)?\s*%/g, " ");
+
+  const found = cleaned.match(/\d[\d,]*(?:\.\d{1,2})?/g) || [];
+  return found
+    .map(function (value) { return parseFloat(value.replace(/,/g, "")); })
+    .filter(function (value) { return isFinite(value) && value > 0; });
+}
+
+// The grand total is what matters. Prefer a labelled line, else the
+// biggest plausible number on the bill.
+function guessTotal(lines) {
+  const patterns = [
+    /grand\s*total/i,
+    /(?:net|total)\s*amount|amount\s*(?:paid|payable|due)|bill\s*amount/i,
+    /total/i
+  ];
+
+  for (let p = 0; p < patterns.length; p++) {
+    for (let i = 0; i < lines.length; i++) {
+      if (!patterns[p].test(lines[i])) continue;
+      const values = numbersIn(lines[i]);
+      if (!values.length) continue;
+      const value = values[values.length - 1];
+      if (value >= 1 && value <= 1000000) return value;
+    }
+  }
+
+  let best = 0;
+  lines.forEach(function (line) {
+    numbersIn(line).forEach(function (value) {
+      if (value >= 1 && value <= 1000000) best = Math.max(best, value);
+    });
+  });
+
+  return best || null;
+}
+
+const MERCHANT_BLOCK = /^(tax\s*invoice|invoice|bill|receipt|cash\s*memo|estimate|quotation|gstin|gst\s*no|fssai|phone|mobile|tel|date|time|table|customer|server|www\.|https?:|email|thank|welcome|duplicate|counter)/i;
+const ADDRESS_WORDS = /\b(road|street|st|nagar|layout|colony|sector|district|city|pin|pincode|bangalore|bengaluru|mumbai|delhi|chennai|hyderabad|pune|kolkata|india|branch)\b/i;
+
+// The shop name is usually the first clean line of text.
+function guessMerchant(lines) {
+  const candidates = lines.slice(0, 8).filter(function (line) {
+    if (line.length < 3 || line.length > 40) return false;
+    if (MERCHANT_BLOCK.test(line)) return false;
+    if (ADDRESS_WORDS.test(line)) return false;
+    if (line.indexOf(",") !== -1) return false; // addresses usually have commas
+    if (!/[A-Za-z]{3}/.test(line)) return false;
+    if (/\d{4,}/.test(line)) return false;
+    return true;
+  });
+
+  if (!candidates.length) return "Bill";
+
+  let best = candidates[0];
+  let bestScore = -Infinity;
+  candidates.forEach(function (line) {
+    const letters = (line.match(/[A-Za-z]/g) || []).length;
+    const digits = (line.match(/\d/g) || []).length;
+    const score = letters - digits * 2 +
+      (line === line.toUpperCase() ? 6 : 0) -
+      (line.length > 24 ? 3 : 0);
+    if (score > bestScore) {
+      bestScore = score;
+      best = line;
+    }
+  });
+
+  let name = best
+    .replace(/\s{2,}/g, " ")
+    .replace(/[|*_=]+/g, " ")
+    .replace(/[^\w\s&.'-]/g, "")
+    .trim();
+
+  if (!name) return "Bill";
+
+  // ALL CAPS looks shouty in the list; make it Title Case.
+  if (name === name.toUpperCase()) {
+    name = name.toLowerCase().replace(/\b[a-z]/g, function (letter) {
+      return letter.toUpperCase();
+    });
+  }
+
+  return name.slice(0, 60);
+}
+
+const CATEGORY_HINTS = [
+  [/swiggy|zomato|restaurant|resto|cafe|coffee|pizza|burger|bakery|sushi|noodle|biryani|dominos|kfc|mcdonald|dhaba|food|kitchen|dining|eatery|meal|hotel|bar\b/i, "Food"],
+  [/supermarket|super\s*market|mart\b|grocery|grocer|bigbasket|dmart|d-mart|reliance|more\s*retail|vegetable|provision|kirana/i, "Groceries"],
+  [/uber|ola\b|rapido|rickshaw|cab\b|taxi|petrol|diesel|fuel|metro|irctc|parking|toll/i, "Transport"],
+  [/pharmacy|medical|hospital|clinic|diagnostic|pathology|lab\b|apollo|medplus|wellness|dental|chemist/i, "Health"],
+  [/electricity|water\s*bill|gas\s*bill|broadband|recharge|jio|airtel|vodafone|\bvi\b|bsnl|postpaid|dth\b|insurance|bescom|mseb/i, "Bills & Recharge"],
+  [/school|college|university|tuition|coaching|course|udemy|coursera|stationery|book\s*store|exam/i, "Education"],
+  [/netflix|spotify|prime\s*video|hotstar|cinema|pvr|inox|movie|gaming|steam\b/i, "Entertainment"],
+  [/\brent\b|landlord|maintenance|society|apartment/i, "Rent"],
+  [/myntra|amazon|flipkart|ajio|meesho|nykaa|shopping|mall\b|boutique|fashion|footwear|decathlon|ikea/i, "Shopping"]
+];
+
+function guessCategory(text) {
+  for (let i = 0; i < CATEGORY_HINTS.length; i++) {
+    if (CATEGORY_HINTS[i][0].test(text)) return CATEGORY_HINTS[i][1];
+  }
+  return "Other";
+}
+
+function parseBillText(text) {
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map(function (line) { return line.trim(); })
+    .filter(Boolean);
+
+  return {
+    merchant: guessMerchant(lines),
+    amount: guessTotal(lines),
+    date: guessDate(text),
+    type: "debit",
+    category: guessCategory(text)
+  };
+}
+
+// Open the normal Add dialog with the scanned values filled in.
+// The user taps one button to confirm, and can fix anything first.
+function prefillAddTransaction(fields, hint) {
+  openAddModal();
+  pendingPhoto = true;
+
+  $("mDate").value = fields.date || todayISO();
+  $("mAmount").value = fields.amount ? Number(fields.amount).toFixed(2) : "";
+  $("mMerchant").value = fields.merchant || "";
+  $("mType").value = fields.type || "debit";
+  $("mCategory").value = fields.category || "Other";
+  if (hint) $("addHint").textContent = hint;
+
+  setTimeout(function () {
+    $("mAmount").focus({ preventScroll: true });
+  }, 60);
+}
+
+async function scanBillOnDevice() {
+  if (!billImage) {
+    setScanStatus("Choose a photo first.", "warn");
+    return;
+  }
+
+  const button = $("scanBtn");
+  const originalLabel = button.textContent;
+  setScanButtons(false);
+  button.textContent = "Reading on device…";
+
+  try {
+    setScanStatus("Loading the on-device reader (first time only)…", "busy");
+    const Tesseract = await loadTesseract();
+
+    const result = await Tesseract.recognize(billImage.dataUrl, "eng", {
+      logger: function (message) {
+        if (message && message.status === "recognizing text" && typeof message.progress === "number") {
+          setScanStatus("Reading the photo… " + Math.round(message.progress * 100) + "%", "busy");
+        }
+      }
+    });
+
+    const text = (result && result.data && result.data.text) || "";
+    const parsed = parseBillText(text);
+
+    if (!parsed.amount) {
+      setScanStatus("Couldn't find a total on that photo — try again or add it manually.", "warn");
+      return;
+    }
+
+    prefillAddTransaction(parsed, "Read on this device — check the amount and shop, then add.");
+    setScanStatus("Found " + inr(parsed.amount) + " — confirm the details.", "on");
+    setStatus("Bill read on your device. Check the details, then click “Add transaction”.");
+  } catch (err) {
+    console.error(err);
+    setScanStatus("On-device reading failed.", "error");
+    showError(err.message || "Couldn't read that photo on this device. Try again or add it manually.");
+  } finally {
+    button.textContent = originalLabel;
+    setScanButtons(Boolean(billImage));
+  }
+}
+
 async function handleBillFile(file) {
   if (!file) return;
 
   setScanStatus("Reading photo…", "busy");
-  $("scanBtn").disabled = true;
+  setScanButtons(false);
 
   try {
     billImage = await compressBillImage(file);
     $("billImg").src = billImage.dataUrl;
     $("billPreview").hidden = false;
-    $("scanBtn").disabled = false;
-    setScanStatus("Photo ready — click “Scan bill”.", "on");
+    setScanButtons(true);
+    setScanStatus("Photo ready — scan it.", "on");
     hideError();
   } catch (err) {
     console.error(err);
@@ -2138,16 +2424,14 @@ async function scanBill() {
     return;
   }
 
+  // No key? Read the bill on this device instead. A key is optional.
   if (!getApiKey()) {
-    showError("Add your own Claude API key first — click “API key” at the top.");
-    setKeyMessage("Paste your key here, then click “Save key”.", true);
-    openKeyPanel();
-    return;
+    return scanBillOnDevice();
   }
 
   const button = $("scanBtn");
   const originalLabel = button.textContent;
-  button.disabled = true;
+  setScanButtons(false);
   button.textContent = "Reading bill…";
   setScanStatus("Claude is reading the bill…", "busy");
 
@@ -2174,7 +2458,7 @@ async function scanBill() {
     showError(err.message || "Something went wrong. Please try again.");
   } finally {
     button.textContent = originalLabel;
-    button.disabled = !billImage;
+    setScanButtons(Boolean(billImage));
   }
 }
 
@@ -2189,6 +2473,7 @@ $("billClear").addEventListener("click", function (event) {
 });
 
 $("scanBtn").addEventListener("click", scanBill);
+$("scanLocalBtn").addEventListener("click", scanBillOnDevice);
 
 // Drag a photo onto the scan box.
 ["dragenter", "dragover"].forEach(function (name) {
@@ -2434,6 +2719,7 @@ function handleManualSubmit(event) {
 
   // ---- ADD MODE ----
   const transaction = Object.assign({ id: uid() }, fields);
+  if (pendingPhoto) transaction.photo = true;
 
   transactions.unshift(transaction);
   saveTransactions();
@@ -2514,6 +2800,7 @@ $("apiKeyInput").addEventListener("keydown", function (event) {
 // Add transaction dialog (resets the form so it always starts clean)
 function openAddModal() {
   editingId = null;
+  pendingPhoto = false;
   $("addTitle").textContent = "Add transaction";
   $("addHint").textContent = "For cash spends or anything the SMS missed.";
   $("addSubmitBtn").textContent = "Add transaction";
@@ -2534,6 +2821,7 @@ function openEditModal(id) {
   if (!transaction) return;
 
   editingId = id;
+  pendingPhoto = false;
   $("addTitle").textContent = "Edit transaction";
   $("addHint").textContent = "Change anything you like, then save.";
   $("addSubmitBtn").textContent = "Save changes";
@@ -2676,7 +2964,8 @@ $("sampleBtn").addEventListener("click", function () {
 const savedKey = getApiKey();
 $("apiKeyInput").value = savedKey;
 updateKeyUI();
-if (!savedKey) openKeyPanel();
+// No auto-popup: scanning bills works without a key. The dialog opens
+// the first time you try to read pasted SMS, or when you click "API key".
 
 // Fill the category dropdown in the add form from CATEGORIES.
 $("mCategory").innerHTML = CATEGORIES.map(function (category) {

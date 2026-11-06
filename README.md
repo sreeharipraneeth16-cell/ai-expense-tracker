@@ -11,7 +11,7 @@ Everything is one HTML file — no build step, no framework, no backend needed f
 ## Features
 
 - **Paste bank SMS → structured transactions.** Claude extracts the date, merchant, amount, debit/credit and category, and skips OTPs, ads and balance alerts.
-- **Scan a bill by photo.** Take a picture (or drop/paste an image) and Claude reads the shop, total, date and category — no typing.
+- **Scan a bill by photo.** Take a picture (or drop/paste an image) and the app fills in the shop, total, date and category — **no API key needed**. Add a key and Claude reads it instead for better accuracy.
 - **Editable table.** Change any category from a dropdown, or edit/delete from Recent activity.
 - **Summary dashboard.** Total spent/received, spending donut, daily/monthly trend chart and category bars.
 - **Manual entry** for cash spends.
@@ -25,7 +25,7 @@ Categories: Food, Groceries, Transport, Shopping, Bills & Recharge, Health, Ente
 ## Use the live demo
 
 1. Open https://sreeharipraneeth16-cell.github.io/ai-expense-tracker/
-2. Click **API key** and paste **your own** Anthropic key (`sk-ant-...`)
+2. Click **API key** and paste **your own** Anthropic key (`sk-ant-...`) — optional. You only need it for SMS; **bill scanning works without a key**.
 3. Paste a bank message (or click **Load sample**) → **Categorize with AI**
 
 > This repo contains **no API key**. Each visitor uses their own key and pays for their own usage.
@@ -35,17 +35,26 @@ Categories: Food, Groceries, Transport, Shopping, Bills & Recharge, Health, Ente
 
 ## Scan a bill (photo)
 
-No typing, no SMS needed — this works on the hosted site too.
+No typing, no SMS, and **no API key needed** — this works on the hosted site too.
 
 1. In **AI import**, click **Scan a bill or receipt**:
    - on a phone, this opens the **camera** (`capture="environment"`)
    - on a computer, pick an image file
    - you can also **drag & drop** an image, or **paste** a screenshot
-2. Check the preview, then click **🪄 Scan bill**
-3. Claude reads the grand total, shop name, date and category and adds the transaction, marked **photo**
-4. Fix anything with **✎** in Recent activity, or the category dropdown in History
+2. Check the preview, then click:
+   - **🪄 Scan bill** — uses Claude if you have a key, otherwise reads on your device automatically
+   - **On-device** — always reads in your browser, even if you do have a key (the photo never leaves your device)
+3. The **Add transaction** dialog opens filled in — check the amount and shop, then click **Add transaction**
+4. The row is marked **photo**; fix anything later with **✎** or the category dropdown
 
-Photos are **resized in your browser** (longest side 1600 px, JPEG) before upload, so requests stay small and fast. Nothing is uploaded anywhere except to Anthropic for that one request — the image is never saved by the app.
+Photos are **resized in your browser** (longest side 1600 px, JPEG) before anything else happens.
+
+| Mode | How it reads | Sends the photo |
+|---|---|---|
+| **Claude** (key saved) | Anthropic vision — most accurate | to Anthropic, once |
+| **On-device** (no key) | Tesseract.js OCR in your browser | nowhere |
+
+The on-device reader downloads once (~15 MB) the first time you use it, then the browser caches it. OCR is less accurate than Claude on blurry or angled photos, which is why the result is shown for confirmation before it is saved. The image itself is never stored by the app.
 
 ---
 
@@ -98,9 +107,9 @@ New transactions appear with an **AUTO** tag and can still be edited or deleted 
 
 - No key is stored in this repository.
 - Transactions live in your browser's `localStorage`.
-- A bill photo is shrunk locally and sent **only** to Anthropic for reading; the app never stores the image.
+- A bill photo is shrunk locally. With a key it is sent **only** to Anthropic for that one request; with **On-device** it never leaves your browser. The app never stores the image.
 - The relay's inbox is stored in your temp folder (`%TEMP%\expense-tracker-inbox.json`), outside the served folder.
-- The only network calls are to Anthropic, plus local calls to the relay.
+- Network calls: Anthropic (only when you use a key), a one-time Tesseract.js download from jsDelivr (only when you use On-device), plus local calls to the relay.
 
 ---
 
@@ -110,4 +119,4 @@ New transactions appear with an **AUTO** tag and can still be edited or deleted 
 - `expense-server.py` — optional local relay: serves the app and accepts SMS at `POST /api/sms`
 - `start-expense-tracker.bat` — Windows one-click launcher
 
-Model: `claude-haiku-5-5` via the Anthropic Messages API. Text messages and bill photos use the same model — photos are sent as base64 image blocks.
+Model: `claude-haiku-5-5` via the Anthropic Messages API. Text messages and bill photos use the same model — photos are sent as base64 image blocks. Without a key, bill photos are read locally with [Tesseract.js](https://tesseract.projectnaptha.com/) instead.
