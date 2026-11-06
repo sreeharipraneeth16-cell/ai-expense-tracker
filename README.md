@@ -11,6 +11,7 @@ Everything is one HTML file — no build step, no framework, no backend needed f
 ## Features
 
 - **Paste bank SMS → structured transactions.** Claude extracts the date, merchant, amount, debit/credit and category, and skips OTPs, ads and balance alerts.
+- **Dictate instead of typing.** Tap 🎤 **Dictate** and speak — your words appear in the box. Uses the browser's speech recognition; no API key.
 - **Scan a bill by photo.** Take a picture (or drop/paste an image) and the app fills in the shop, total, date and category — **no API key needed**. Add a key and Claude reads it instead for better accuracy.
 - **Editable table.** Change any category from a dropdown, or edit/delete from Recent activity.
 - **Summary dashboard.** Total spent/received, spending donut, daily/monthly trend chart and category bars.
@@ -55,6 +56,19 @@ Photos are **resized in your browser** (longest side 1600 px, JPEG) before anyth
 | **On-device** (no key) | Tesseract.js OCR in your browser | nowhere |
 
 The on-device reader downloads once (~15 MB) the first time you use it, then the browser caches it. OCR is less accurate than Claude on blurry or angled photos, which is why the result is shown for confirmation before it is saved. The image itself is never stored by the app.
+
+---
+
+## Dictate a message
+
+1. In **AI import**, tap **🎤 Dictate** and allow microphone access the first time
+2. Speak normally, e.g. *"Rs 450 debited from account 1234 at Swiggy on 3 November"*
+3. The words are typed into the box as you talk (the line below shows what's being heard right now)
+4. Tap **Listening…** to stop, then **Categorize with AI**
+
+- Works in **Chrome, Edge and Safari**. Firefox doesn't implement it, so the button shows *"This browser can't dictate"*.
+- No API key is involved. Recognition is set to **English (India)** and falls back to English (US) if needed.
+- The browser's speech service does the listening. In Chrome, audio is processed by Google; the app itself never records or stores audio.
 
 ---
 
@@ -108,8 +122,9 @@ New transactions appear with an **AUTO** tag and can still be edited or deleted 
 - No key is stored in this repository.
 - Transactions live in your browser's `localStorage`.
 - A bill photo is shrunk locally. With a key it is sent **only** to Anthropic for that one request; with **On-device** it never leaves your browser. The app never stores the image.
+- Dictation uses your browser's speech recognition (Chrome processes audio with Google). The app never records or stores audio.
 - The relay's inbox is stored in your temp folder (`%TEMP%\expense-tracker-inbox.json`), outside the served folder.
-- Network calls: Anthropic (only when you use a key), a one-time Tesseract.js download from jsDelivr (only when you use On-device), plus local calls to the relay.
+- Network calls: Anthropic (only when you use a key), a one-time Tesseract.js download from jsDelivr (only when you use On-device), your browser's speech service (only while dictating), plus local calls to the relay.
 
 ---
 
@@ -119,4 +134,4 @@ New transactions appear with an **AUTO** tag and can still be edited or deleted 
 - `expense-server.py` — optional local relay: serves the app and accepts SMS at `POST /api/sms`
 - `start-expense-tracker.bat` — Windows one-click launcher
 
-Model: `claude-haiku-5-5` via the Anthropic Messages API. Text messages and bill photos use the same model — photos are sent as base64 image blocks. Without a key, bill photos are read locally with [Tesseract.js](https://tesseract.projectnaptha.com/) instead.
+Model: `claude-haiku-5-5` via the Anthropic Messages API. Text messages and bill photos use the same model — photos are sent as base64 image blocks. Without a key, bill photos are read locally with [Tesseract.js](https://tesseract.projectnaptha.com/) instead. Dictation uses the browser's built-in Web Speech API.

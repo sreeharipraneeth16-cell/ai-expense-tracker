@@ -259,6 +259,27 @@
   }
   #smsInput::placeholder { color: #5f6270; }
 
+  /* ---- Dictation (speech → text) ---- */
+  .dictate-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .mic-btn { gap: 7px; }
+  .mic-btn.listening {
+    border-color: rgba(215, 255, 79, .55);
+    background: rgba(215, 255, 79, .1);
+    color: var(--lime);
+  }
+  .mic-btn.listening .mic-icon { animation: pulse 1s ease-in-out infinite; }
+  .mic-status {
+    flex: 1 1 200px; min-width: 0;
+    font-size: 12px; line-height: 1.45; color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  .mic-status.listening { color: var(--lime); }
+  .mic-status.warn { color: var(--amber); }
+  .mic-status.error { color: var(--red); }
+
   .actions-row {
     display: flex; align-items: center; gap: 10px;
     flex-wrap: wrap; margin-top: 12px;
@@ -767,11 +788,19 @@
       <section class="card import-card" id="import" aria-labelledby="importTitle">
         <div class="card-head">
           <h2 id="importTitle">✦ AI import</h2>
-          <p class="hint">Paste one message per line. OTPs, ads and balance alerts are skipped automatically.</p>
+          <p class="hint">Paste one message per line, or dictate with the mic. OTPs, ads and balance alerts are skipped automatically.</p>
         </div>
 
         <label class="sr-only" for="smsInput">Bank messages and receipts</label>
         <textarea id="smsInput" spellcheck="false" placeholder="Rs.450.00 debited from A/c XX1234 at SWIGGY on 03-11-26&#10;Rs.25,000.00 credited to A/c XX1234 from ACME SALARY on 01-11-26"></textarea>
+
+        <div class="dictate-bar">
+          <button id="micBtn" class="btn ghost small mic-btn" type="button" aria-pressed="false">
+            <span id="micIcon" class="mic-icon" aria-hidden="true">🎤</span>
+            <span id="micLabel">Dictate</span>
+          </button>
+          <span id="micStatus" class="mic-status" role="status" aria-live="polite">Or speak a bank message — it types itself.</span>
+        </div>
 
         <div class="actions-row">
           <button id="categorizeBtn" class="btn primary" type="button">✦ Categorize with AI</button>
@@ -1998,6 +2027,7 @@ function storeParsedTransactions(list, options) {
 async function handleCategorize() {
   hideError();
   setStatus("");
+  if (listening) stopDictation();
 
   const lines = $("smsInput").value
     .split(/\r?\n/)
@@ -2506,6 +2536,165 @@ document.addEventListener("paste", function (event) {
     }
   }
 });
+
+
+/* =========================================================
+   DICTATION (speech → text)
+   Uses the browser's built-in speech recognition, so there is no
+   API key and nothing to install. Chrome and Edge work best.
+   ========================================================= */
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+let recognition = null;
+let listening = false;
+let restartCount = 0;
+let triedFallbackLanguage = false;
+
+function setMicStatus(text, state) {
+  const box = $("micStatus");
+  if (!box) return;
+  box.textContent = text;
+  box.className = "mic-status" + (state ? " " + state : "");
+}
+
+function setMicUi(on) {
+  const button = $("micBtn");
+  button.classList.toggle("listening", on);
+  button.setAttribute("aria-pressed", on ? "true" : "false");
+  $("micIcon").textContent = on ? "●" : "🎤";
+  $("micLabel").textContent = on ? "Listening…" : "Dictate";
+}
+
+// Add a spoken phrase to the message box, keeping a gap between phrases.
+function insertDictation(text) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  if (!clean) return;
+
+  const box = $("smsInput");
+  let value = box.value;
+  if (value && !/\s$/.test(value)) value += " ";
+  box.value = value + clean;
+  box.scrollTop = box.scrollHeight;
+}
+
+function buildRecognition() {
+  const instance = new SpeechRecognition();
+  instance.lang = "en-IN"; // Indian English understands "Rs", UPI refs, etc.
+  instance.continuous = true;
+  instance.interimResults = true;
+  instance.maxAlternatives = 1;
+
+  instance.onresult = function (event) {
+    restartCount = 0; // real speech: give the silence-restart budget again
+    let interim = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      const transcript = result[0] && result[0].transcript;
+      if (!transcript) continue;
+
+      if (result.isFinal) insertDictation(transcript);
+      else interim += transcript;
+    }
+
+    if (interim) setMicStatus("Listening… " + interim, "listening");
+    else if (listening) setMicStatus("Listening — speak now.", "listening");
+  };
+
+  instance.onerror = function (event) {
+    const code = event.error;
+    if (code === "aborted") return;
+
+    // Some browsers don't ship an Indian English model — retry once.
+    if (code === "language-not-supported" && !triedFallbackLanguage) {
+      triedFallbackLanguage = true;
+      instance.lang = "en-US";
+      try { instance.start(); return; } catch (err) { /* fall through */ }
+    }
+
+    listening = false;
+    setMicUi(false);
+
+    if (code === "not-allowed" || code === "service-not-allowed") {
+      setMicStatus("Microphone blocked. Allow it in the browser's site settings, then try again.", "error");
+    } else if (code === "no-speech") {
+      setMicStatus("Didn't hear anything — tap Dictate and try again.", "warn");
+    } else if (code === "audio-capture") {
+      setMicStatus("No microphone found on this device.", "error");
+    } else if (code === "network") {
+      setMicStatus("The speech service is unreachable. Check your internet connection.", "error");
+    } else {
+      setMicStatus("Dictation stopped (" + code + ").", "error");
+    }
+  };
+
+  instance.onend = function () {
+    if (!listening) {
+      setMicUi(false);
+      return;
+    }
+
+    // Chrome stops after a pause. Restart while the user still wants to talk.
+    if (restartCount < 5) {
+      restartCount++;
+      try { instance.start(); return; } catch (err) { /* fall through */ }
+    }
+
+    listening = false;
+    setMicUi(false);
+    setMicStatus("Stopped listening. Tap Dictate to continue.", "");
+  };
+
+  return instance;
+}
+
+function startDictation() {
+  if (!SpeechRecognition) return;
+
+  if (!recognition) recognition = buildRecognition();
+
+  try {
+    recognition.start();
+    listening = true;
+    triedFallbackLanguage = false;
+    restartCount = 0;
+    hideError();
+    setMicUi(true);
+    setMicStatus("Listening — speak now.", "listening");
+  } catch (err) {
+    // "already started" is harmless.
+    if (String(err && err.name) === "InvalidStateError") return;
+    listening = false;
+    setMicUi(false);
+    setMicStatus("Couldn't start the microphone. Please try again.", "error");
+  }
+}
+
+function stopDictation() {
+  listening = false;
+  setMicUi(false);
+
+  if (recognition) {
+    try { recognition.stop(); } catch (err) { /* already stopped */ }
+  }
+
+  setMicStatus("Stopped. Tap Dictate to speak again.", "");
+}
+
+function toggleDictation() {
+  if (!SpeechRecognition) return;
+  if (listening) stopDictation();
+  else startDictation();
+}
+
+if (SpeechRecognition) {
+  $("micBtn").addEventListener("click", toggleDictation);
+} else {
+  $("micBtn").disabled = true;
+  $("micBtn").title = "Dictation needs Chrome, Edge or Safari";
+  setMicStatus("This browser can't dictate. Try Chrome or Edge.", "warn");
+}
 
 
 /* =========================================================
