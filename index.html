@@ -318,6 +318,9 @@
   .mic-inline.listening .mic-icon { animation: pulse 1s ease-in-out infinite; }
   .mic-inline:disabled { cursor: not-allowed; opacity: .55; }
   .field .mic-status { flex: none; margin-top: 6px; }
+  .quick-add-row { flex-wrap: nowrap; }
+  .quick-add-row .btn.full { width: auto; flex: 1 1 auto; }
+  .quick-add-row .mic-inline { padding: 11px 14px; }
 
   .actions-row {
     display: flex; align-items: center; gap: 10px;
@@ -1004,8 +1007,13 @@
       </div>
       <strong class="balance-amount" id="railNet">₹0</strong>
       <small class="stat-sub" id="railNetSub">No transactions yet</small>
-      <div class="actions-row">
+      <div class="actions-row quick-add-row">
         <button id="addBtn" class="btn primary full" type="button">+ Add transaction</button>
+        <button id="quickVoiceBtn" class="mic-inline" type="button"
+          title="Open Add transaction and speak the shop name — no API key needed">
+          <span class="mic-icon" aria-hidden="true">🎤</span>
+          <span>Speak</span>
+        </button>
       </div>
     </div>
 
@@ -2816,18 +2824,26 @@ function toggleDictation(key) {
 if (SpeechRecognition) {
   $("micBtn").addEventListener("click", function () { toggleDictation("sms"); });
   $("merchantMicBtn").addEventListener("click", function () { toggleDictation("merchant"); });
+  $("quickVoiceBtn").addEventListener("click", function () {
+    // Dashboard shortcut: open the dialog and listen for the shop name.
+    openAddModal();
+    startDictation("merchant");
+  });
 } else {
   $("micBtn").disabled = true;
   $("merchantMicBtn").disabled = true;
+  $("quickVoiceBtn").disabled = true;
 
   if (!window.isSecureContext) {
     $("micBtn").title = "Microphone needs an HTTPS page";
     $("merchantMicBtn").title = "Microphone needs an HTTPS page";
+    $("quickVoiceBtn").title = "Microphone needs an HTTPS page";
     setMicStatus("Microphone needs a secure page. On your phone use the HTTPS link (GitHub Pages), or localhost on this PC.", "warn", "sms");
     setMicStatus("Microphone needs a secure page — type the name instead.", "warn", "merchant");
   } else {
     $("micBtn").title = "Dictation needs Chrome, Edge or Safari";
     $("merchantMicBtn").title = "Dictation needs Chrome, Edge or Safari";
+    $("quickVoiceBtn").title = "Dictation needs Chrome, Edge or Safari";
     setMicStatus("This browser can't dictate. Use Chrome, Edge or Safari.", "warn", "sms");
     setMicStatus("This browser can't dictate — type the name instead.", "warn", "merchant");
   }

@@ -79,6 +79,7 @@ The **Merchant / description** field has its own **🎤 Speak** button, so a cas
 3. The words appear in the field; add the amount and save
 
 - Also works when **editing** an existing transaction.
+- Faster: the **🎤 Speak** button beside **+ Add transaction** in the Period balance card opens the dialog with the mic already listening.
 - The two mics share one engine, so only one listens at a time — starting one stops the other.
 - Closing the dialog stops the mic automatically, and no API key is needed here either.
 - Amount is typed rather than spoken, because speech-to-number is unreliable (e.g. "four fifty" could mean 4.50 or 450).
