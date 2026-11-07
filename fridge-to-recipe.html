@@ -200,6 +200,14 @@
       opacity: 0.85;
     }
 
+    button.get-recipes.local-btn {
+      background: linear-gradient(135deg, #558b2f, #33691e);
+      box-shadow: 0 8px 24px rgba(85, 139, 47, 0.35);
+      margin-top: 12px;
+    }
+
+    .small-note { font-size: 0.85rem; color: #558b2f; margin: 10px 0 0; }
+
     /* Loading spinner */
     .loading {
       display: inline-flex;
@@ -504,6 +512,12 @@
           Cooking up ideas...
         </span>
       </button>
+      <br />
+      <!-- Local AI: runs a small model in your browser. No API key, no server. -->
+      <button type="button" class="get-recipes local-btn" id="localAiBtn">
+        <span id="localAiBtnText">🤖 Use local AI — no key needed</span>
+      </button>
+      <p class="small-note" id="localAiNote">Local AI downloads a small model once (~300 MB), then works offline. It is slower and less smart than Gemini, but private and free.</p>
     </div>
 
     <!-- Error box -->
@@ -994,6 +1008,107 @@ Assume the user already has salt, oil, water and basic spices.
     renderChips();
     initFilterButtons();
 
+  </script>
+
+  <!-- =========================================================
+       LOCAL AI — NO API KEY NEEDED
+       How it works (in simple words):
+       1. The first time you click the green button, your browser
+          downloads a SMALL AI model from Hugging Face (free, no key).
+          That download is about 300 MB and happens only once.
+       2. After that, the AI runs INSIDE your browser on your own
+          computer. Your ingredients are never sent to any server.
+       3. The small model is slower and less smart than Gemini,
+          but it is free, private, and needs no API key at all.
+       We use Qwen2.5-0.5B-Instruct (0.5 billion words of memory,
+       small enough to run on a normal laptop).
+       ========================================================= -->
+  <script type="module">
+    // Import the transformers.js library from a public CDN.
+    // This is a trusted, open-source library made by Hugging Face.
+    import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/+esm";
+
+    // We load the AI model only once, then reuse it.
+    let generator = null;
+
+    // Download + start the AI model (first click only).
+    async function loadGenerator(onProgress) {
+      if (generator) return generator;
+      onProgress("Downloading the small AI model (first time only)... please wait.");
+      generator = await pipeline("text-generation", "Xenova/Qwen2.5-0.5B-Instruct", {
+        dtype: "q4",
+        progress_callback: (p) => {
+          // p tells us which file is downloading and how far along it is.
+          if (p && p.status === "progress" && p.file) {
+            onProgress("Downloading " + p.file + "... " + Math.round(p.progress || 0) + "%");
+          }
+        }
+      });
+      return generator;
+    }
+
+    // Small models sometimes add extra words around the JSON.
+    // This helper pulls out just the {"recipes": [...]} part.
+    function parseRecipes(text) {
+      let t = String(text || "").trim();
+      const start = t.indexOf("{");
+      const end = t.lastIndexOf("}");
+      if (start >= 0 && end > start) t = t.slice(start, end + 1);
+      return JSON.parse(t).recipes;
+    }
+
+    const localBtn = document.getElementById("localAiBtn");
+    const localLabel = document.getElementById("localAiBtnText");
+    const localNote = document.getElementById("localAiNote");
+
+    localBtn.addEventListener("click", async () => {
+      // Reuse the same checks + prompt + display code as the Gemini button.
+      const input = document.getElementById("ingredientInput");
+      if (!input.value.trim()) {
+        window.showError("Please enter some ingredients first.");
+        return;
+      }
+      if (!window.buildPrompt || !window.renderRecipes || !window.showError) {
+        window.alert("Page is still loading. Please wait a second and try again.");
+        return;
+      }
+
+      localBtn.disabled = true;
+      try {
+        // Step 1: load the model (only the first time needs a download).
+        const gen = await loadGenerator((msg) => {
+          localNote.textContent = msg;
+          localLabel.textContent = "🤖 " + msg;
+        });
+
+        // Step 2: ask the local AI using the SAME prompt as Gemini.
+        localNote.textContent = "Model ready. Thinking...";
+        localLabel.textContent = "🤖 Thinking...";
+        const prompt = window.buildPrompt();
+        const messages = [
+          { role: "system", content: "You are a helpful cooking assistant. Reply with ONLY valid JSON, no markdown code fences, no extra text." },
+          { role: "user", content: prompt }
+        ];
+        const result = await gen(messages, { max_new_tokens: 700, temperature: 0.7, do_sample: true });
+
+        // Step 3: read the AI's answer and show the recipe cards.
+        let text = "";
+        if (Array.isArray(result) && result[0]) {
+          const genText = result[0].generated_text;
+          text = Array.isArray(genText) ? (genText[genText.length - 1] && genText[genText.length - 1].content || "") : String(genText || "");
+        }
+        const recipes = parseRecipes(text);
+        window.renderRecipes(recipes);
+        localNote.textContent = "Done. Local AI ran fully in your browser — nothing was sent to any server.";
+      } catch (err) {
+        console.error(err);
+        window.showError("We couldn't get recipes from local AI.\n" + (err.message || "Your browser may not support local AI. Try a recent Chrome or Edge browser, or use the Gemini button with a free key."));
+        localNote.textContent = "Local AI could not run in this browser. You can still use the Gemini button with a free key.";
+      } finally {
+        localBtn.disabled = false;
+        localLabel.textContent = "🤖 Use local AI — no key needed";
+      }
+    });
   </script>
 </body>
 </html>
