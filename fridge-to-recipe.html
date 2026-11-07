@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fridge to Recipe</title>
+  <style>
+    /* =========================================================
+       Fridge to Recipe - Beginner-friendly single-file app
+       Colors: #f4f7f2 light bg, green & orange gradient accents
+       ========================================================= */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f4f7f2; /* light background per spec */
+      color: #1b5e20;      /* dark green text */
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* Banner with green-to-orange gradient */
+    .banner {
+      background: linear-gradient(135deg, #4caf50, #fb8c00);
+      color: #ffffff;
+      padding: 30px 16px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .banner h1 {
+      margin: 0 0 6px;
+      font-size: 2.2rem;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .banner .subtitle {
+      margin: 0;
+      font-size: 1rem;
+      opacity: 0.95;
+    }
+
+    /* White rounded panel overlapping the banner */
+    .panel {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px 20px 20px;
+      margin: -24px 16px 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ================= Input section ================= */
+    .input-section { margin-bottom: 20px; }
+
+    label {
+      display: block;
+      font-weight: 600;
+      color: #2e7d32;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      padding: 12px 14px;
+      font-size: 1rem;
+      border: 2px solid #a5d6a7;
+      border-radius: 10px;
+      outline: none;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    textarea:focus { border-color: #4caf50; }
+
+    /* Quick-add chips */
+    .chips-label {
+      font-size: 0.85rem;
+      color: #558b2f;
+      margin: 14px 0 8px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      background: #e8f5e9;
+      color: #1b5e20;
+      border: 1px solid #c8e6c9;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chip:hover { background: #c8e6c9; }
+
+    /* ================= Filters grid ================= */
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .filter-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #33691e;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: #ffffff;
+      border: 2px solid #a5d6a7;
+      color: #2e7d32;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover { background: #e8f5e9; }
+
+    .filter-btn.active {
+      background: #4caf50;
+      color: #ffffff;
+      border-color: #4caf50;
+    }
+
+    select {
+      padding: 10px 14px;
+      border: 2px solid #a5d6a7;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      background: #ffffff;
+      color: #1b5e20;
+      cursor: pointer;
+      outline: none;
+    }
+
+    select:focus { border-color: #4caf50; }
+
+    /* ================= Get recipes button ================= */
+    .actions {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    button.get-recipes {
+      padding: 16px 36px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #4caf50, #fb8c00);
+      color: #ffffff;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      min-width: 220px;
+      box-shadow: 0 8px 24px rgba(76, 175, 80, 0.35);
+      transition: transform 0.15s;
+    }
+
+    button.get-recipes:hover:not(:disabled) {
+      filter: brightness(1.05);
+    }
+
+    button.get-recipes:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    button.get-recipes:disabled {
+      background: #a5d6a7;
+      box-shadow: none;
+      cursor: not-allowed;
+      opacity: 0.85;
+    }
+
+    /* Loading spinner */
+    .loading {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ================= Error box ================= */
+    .error-box {
+      background: #ffebee;
+      color: #b71c1c;
+      border: 1px solid #ffcdd2;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+      white-space: pre-wrap;
+      display: none;
+    }
+
+    /* ================= Results ================= */
+    .results-heading {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #1b5e20;
+      margin-bottom: 16px;
+      padding: 0 4px;
+    }
+
+    #results {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      border: 1px solid #c8e6c9;
+      animation: fadeIn 0.6s ease-out;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Colored gradient headers: green, orange, red */
+    .card:nth-child(1) .card-header { background: linear-gradient(135deg, #4caf50, #2e7d32); }
+    .card:nth-child(2) .card-header { background: linear-gradient(135deg, #fb8c00, #e65100); }
+    .card:nth-child(3) .card-header { background: linear-gradient(135deg, #e53935, #b71c1c); }
+
+    .card-header {
+      color: #ffffff;
+      padding: 16px;
+      position: relative;
+    }
+
+    .card-header h2 {
+      margin: 0 0 10px;
+      font-size: 1.25rem;
+    }
+
+    .card-header .badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      backdrop-filter: blur(4px);
+    }
+
+    /* Ingredients list */
+    .ingredients-section {
+      padding: 16px;
+      border-bottom: 1px solid #e8f5e9;
+    }
+
+    .ingredients-section h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      color: #2e7d32;
+    }
+
+    .ingredients-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .ingredient-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .ingredient-row.have {
+      background: #e8f5e9;
+      color: #1b5e20;
+    }
+
+    .ingredient-row.missing {
+      background: #fff3e0;
+      color: #e65100;
+    }
+
+    .ingredient-row .item {
+      font-weight: 500;
+    }
+
+    .ingredient-row .quantity {
+      font-size: 0.85rem;
+      opacity: 0.85;
+    }
+
+    .ingredient-row .need {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      margin-left: 6px;
+    }
+
+    /* Steps */
+    .steps-section { padding: 16px; }
+
+    .steps-section h3 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+      color: #2e7d32;
+    }
+
+    .steps-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .step-number {
+      width: 26px;
+      height: 26px;
+      background: #4caf50;
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .step-text {
+      color: #1b5e20;
+      font-size: 0.95rem;
+    }
+
+    /* ================= Footer ================= */
+    footer {
+      text-align: center;
+      padding: 30px 0;
+      font-size: 0.85rem;
+      color: #689f38;
+    }
+
+    /* ================= Responsive ================= */
+    @media (max-width: 640px) {
+      .filters { grid-template-columns: 1fr; }
+      .panel { margin: -16px 12px 16px; padding: 16px; }
+      .banner { padding: 20px 12px 12px; }
+      .banner h1 { font-size: 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Banner -->
+  <div class="banner">
+    <h1>🥕 Fridge to Recipe</h1>
+    <p class="subtitle">Tell us what you have. We'll tell you what to cook.</p>
+  </div>
+
+  <!-- White rounded panel -->
+  <div class="panel">
+    <!-- Input section -->
+    <div class="input-section">
+      <label for="ingredientInput">What's in your fridge?</label>
+      <textarea id="ingredientInput" placeholder="e.g. eggs, tomatoes, onion, rice"></textarea>
+
+      <div class="chips-label">Quick add</div>
+      <div class="chips" id="chipsContainer"></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <!-- Food type -->
+      <div class="filter-group">
+        <label>Food type</label>
+        <div class="btn-group" id="dietBtns"></div>
+      </div>
+
+      <!-- Time limit -->
+      <div class="filter-group">
+        <label>Time limit</label>
+        <select id="timeFilter">
+          <option value="Any">Any</option>
+          <option value="under 15 min">under 15 min</option>
+          <option value="under 30 min">under 30 min</option>
+          <option value="under 45 min">under 45 min</option>
+          <option value="under 1 hour">under 1 hour</option>
+        </select>
+      </div>
+
+      <!-- Cooking style -->
+      <div class="filter-group">
+        <label>Cooking style</label>
+        <div class="btn-group" id="styleBtns"></div>
+      </div>
+
+      <!-- Cuisine -->
+      <div class="filter-group">
+        <label>Cuisine</label>
+        <select id="cuisineFilter">
+          <option value="Any">Any</option>
+          <option value="North Indian">North Indian</option>
+          <option value="South Indian">South Indian</option>
+          <option value="Andhra">Andhra</option>
+          <option value="Indian street food">Indian street food</option>
+          <option value="Chinese">Chinese</option>
+          <option value="Italian">Italian</option>
+          <option value="Continental">Continental</option>
+        </select>
+      </div>
+
+      <!-- Spice level -->
+      <div class="filter-group">
+        <label>Spice level</label>
+        <select id="spiceFilter">
+          <option value="Any">Any</option>
+          <option value="Mild">Mild</option>
+          <option value="Medium">Medium</option>
+          <option value="Spicy">Spicy</option>
+        </select>
+      </div>
+
+      <!-- Servings -->
+      <div class="filter-group">
+        <label>Servings</label>
+        <div class="btn-group" id="servingsBtns"></div>
+      </div>
+
+      <!-- Meal type -->
+      <div class="filter-group">
+        <label>Meal type</label>
+        <div class="btn-group" id="mealBtns"></div>
+      </div>
+    </div>
+
+    <!-- Get recipes button -->
+    <div class="actions">
+      <button type="button" class="get-recipes" id="getRecipesBtn">
+        <span class="btn-text" id="btnText">✨ Get recipes</span>
+        <span class="loading" id="loadingSpinner" style="display:none;">
+          <span class="spinner"></span>
+          Cooking up ideas...
+        </span>
+      </button>
+    </div>
+
+    <!-- Error box -->
+    <div id="errorBox" class="error-box"></div>
+
+    <!-- Results heading and grid -->
+    <div class="results-heading">Popular Recipes</div>
+    <div id="results"></div>
+  </div>
+
+  <footer>
+    Made with AI 🍳
+  </footer>
+
+  <script>
+    /* =========================================================
+       Fridge to Recipe - JavaScript
+       Beginner-friendly with comments explaining each part
+       ========================================================= */
+
+    // ------------------------------------------------------------------
+    // 1. CONFIGURATION
+    // ------------------------------------------------------------------
+    // Paste your Google Gemini API key between the quotes.
+    // Get one at: https://makersuite.google.com/app/apikey
+    const GEMINI_API_KEY = 'PASTE_YOUR_API_KEY_HERE';
+
+    // Models to try in order. If one returns 404/429/503, try the next one.
+    const MODELS = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-2.5-flash"];
+
+    // ------------------------------------------------------------------
+    // 2. STATE (variables that remember the user's choices)
+    // ------------------------------------------------------------------
+    let ingredientsText = "";             // text from the textarea
+    let selectedDiet = "Any";             // Any | Veg | Egg | Non-veg
+    let selectedTime = "under 30 min";    // default is under 30 min
+    let selectedStyle = "Any";            // cooking style
+    let selectedCuisine = "Any";          // cuisine
+    let selectedSpice = "Any";            // spice level
+    let selectedServings = 2;             // default 2 servings
+    let selectedMeal = "Any";             // meal type
+
+    // ------------------------------------------------------------------
+    // 3. DOM ELEMENTS (references to HTML elements)
+    // ------------------------------------------------------------------
+    const ingredientInput = document.getElementById('ingredientInput');
+    const chipsContainer = document.getElementById('chipsContainer');
+    const getRecipesBtn = document.getElementById('getRecipesBtn');
+    const btnText = document.getElementById('btnText');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const errorBox = document.getElementById('errorBox');
+    const resultsEl = document.getElementById('results');
+
+    // Filter panel elements
+    const dietBtns = document.getElementById('dietBtns');
+    const styleBtns = document.getElementById('styleBtns');
+    const servingsBtns = document.getElementById('servingsBtns');
+    const mealBtns = document.getElementById('mealBtns');
+    const timeFilter = document.getElementById('timeFilter');
+    const cuisineFilter = document.getElementById('cuisineFilter');
+    const spiceFilter = document.getElementById('spiceFilter');
+
+    // ------------------------------------------------------------------
+    // 4. QUICK-ADD CHIPS
+    // ------------------------------------------------------------------
+    const quickAddItems = ['eggs', 'tomato', 'onion', 'rice', 'potato', 'paneer', 'milk', 'chilli', 'bread', 'chicken'];
+
+    function renderChips() {
+      // Clear the container first
+      chipsContainer.innerHTML = '';
+
+      // Create a button chip for each ingredient
+      quickAddItems.forEach(item => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'chip';
+        chip.textContent = item;
+
+        // When clicked, add this ingredient to the textarea
+        chip.onclick = () => {
+          const current = ingredientInput.value.trim();
+          const newValue = current ? current + ', ' + item : item;
+          ingredientInput.value = newValue;
+          ingredientsText = newValue;
+          // Tell the page the input changed
+          ingredientInput.dispatchEvent(new Event('input'));
+        };
+
+        chipsContainer.appendChild(chip);
+      });
+    }
+
+    // Keep the state in sync whenever the user types in the textarea
+    ingredientInput.addEventListener('input', (e) => {
+      ingredientsText = e.target.value.trim();
+    });
+
+    // ------------------------------------------------------------------
+    // 5. FILTER BUTTONS
+    // ------------------------------------------------------------------
+    function setupFilterButtons(filterName) {
+      // Find all buttons for this filter group
+      const buttons = document.querySelectorAll(`[data-filter="${filterName}"]`);
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          // Remove 'active' from all buttons in this group
+          buttons.forEach(b => b.classList.remove('active'));
+          // Add 'active' to the clicked one
+          btn.classList.add('active');
+
+          // Save the value into the right state variable
+          const val = btn.dataset.value;
+          if (filterName === 'diet') selectedDiet = val;
+          else if (filterName === 'style') selectedStyle = val;
+          else if (filterName === 'servings') selectedServings = parseInt(val) || 2;
+          else if (filterName === 'meal') selectedMeal = val;
+        });
+      });
+    }
+
+    // Setup each filter group
+    setupFilterButtons('diet');
+    setupFilterButtons('style');
+    setupFilterButtons('servings');
+    setupFilterButtons('meal');
+
+    // Dropdown filters
+    timeFilter.addEventListener('change', (e) => { selectedTime = e.target.value; });
+    cuisineFilter.addEventListener('change', (e) => { selectedCuisine = e.target.value; });
+    spiceFilter.addEventListener('change', (e) => { selectedSpice = e.target.value; });
+
+    // ------------------------------------------------------------------
+    // 6. BUILD THE PROMPT SENT TO GEMINI
+    // ------------------------------------------------------------------
+    function buildPrompt() {
+      // Turn the textarea text into a clean list of ingredients
+      const userIngredients = ingredientsText
+        .split(',')
+        .map(i => i.trim())
+        .filter(i => i.length > 0);
+
+      // Start building the instructions for the AI
+      let prompt = `You are a helpful cooking assistant. The user has these ingredients: ${userIngredients.join(', ')}.
+The user also already has salt, oil, water and basic spices, so you do not need to list those unless they are a main ingredient.
+
+Filters:`;
+
+      // Only add a filter line if it is NOT "Any"
+      if (selectedDiet !== 'Any') {
+        prompt += `\n- Diet: strictly ${selectedDiet} only`;
+      }
+      if (selectedTime !== 'Any') {
+        prompt += `\n- Maximum cooking time: ${selectedTime}`;
+      }
+      if (selectedStyle !== 'Any') {
+        prompt += `\n- Cooking style: ${selectedStyle}`;
+      }
+      if (selectedCuisine !== 'Any') {
+        prompt += `\n- Cuisine: ${selectedCuisine}`;
+      }
+      if (selectedSpice !== 'Any') {
+        prompt += `\n- Spice level: ${selectedSpice}`;
+      }
+      if (selectedServings !== 2) {
+        prompt += `\n- Servings: ${selectedServings}`;
+      }
+      if (selectedMeal !== 'Any') {
+        prompt += `\n- Meal type: ${selectedMeal}`;
+      }
+
+      // Tell the AI exactly what JSON to return
+      prompt += `
+Suggest exactly 3 recipes the user can make.
+Return ONLY valid JSON (no markdown code fences, no extra text).
+Format:
+{
+  "recipes": [
+    {
+      "name": "Recipe name",
+      "time": "25 min",
+      "style": "Stir-fry",
+      "ingredients": [
+        {"item": "potato", "quantity": "200 g (2 medium)", "have": true},
+        {"item": "onion", "quantity": "100 g (1 medium)", "have": true},
+        {"item": "mustard seeds", "quantity": "5 ml (1 tsp)", "have": false}
+      ],
+      "steps": ["Heat oil in a pan.", "Add mustard seeds and let them splutter.", "Add potatoes and cook until tender."]
+    }
+  ]
+}
+
+For quantities, use grams for solids and ml for liquids, plus a household measure in brackets where helpful (e.g. "200 g (2 medium)", "15 ml (1 tbsp)").
+For each ingredient, set "have": true if it is in the user's ingredient list above, otherwise false.
+Assume the user already has salt, oil, water and basic spices.
+`;
+
+      return prompt;
+    }
+
+    // ------------------------------------------------------------------
+    // 7. HELPER: WAIT (sleep) for retry delays
+    // ------------------------------------------------------------------
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // ------------------------------------------------------------------
+    // 8. CALL THE GEMINI API
+    // ------------------------------------------------------------------
+    async function getRecipes() {
+      // If the API key is still the placeholder, show a friendly message
+      if (!GEMINI_API_KEY || GEMINI_API_KEY === 'PASTE_YOUR_API_KEY_HERE') {
+        showError('Please paste your Google Gemini API key into the GEMINI_API_KEY constant at the top of the script, save the file, and refresh.');
+        return;
+      }
+
+      // Make sure the user entered at least one ingredient
+      if (!ingredientsText) {
+        showError('Please enter some ingredients first.');
+        return;
+      }
+
+      // UI state: show loading, hide error, clear old results
+      showLoading(true);
+      errorBox.style.display = 'none';
+      resultsEl.innerHTML = '';
+
+      const prompt = buildPrompt();
+
+      try {
+        let data = null;
+        let allErrors = '';
+        const maxRounds = 3;
+
+        // Try up to 3 rounds
+        for (let round = 1; round <= maxRounds; round++) {
+          // Before rounds 2 and 3, show a retry message and wait 4 seconds
+          if (round > 1) {
+            btnText.textContent = `Google is busy, retrying (${round}/${maxRounds})...`;
+            await sleep(4000);
+          }
+
+          // In each round, try every model in MODELS in order
+          for (const model of MODELS) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': GEMINI_API_KEY
+              },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: 'application/json' }
+              })
+            });
+
+            // If the request succeeded, use the data and stop
+            if (response.ok) {
+              data = await response.json();
+              break;
+            }
+
+            // Request failed - collect the error message
+            const errText = (await response.text()).slice(0, 300);
+            allErrors += `Error ${response.status} (model ${model}): ${errText}\n\n`;
+
+            // On 404, 429 or 503, move on to the next model
+            // For any other error, stop immediately
+            if (![404, 429, 503].includes(response.status)) {
+              throw new Error(allErrors || 'API error');
+            }
+          }
+
+          // If we got data, exit the round loop
+          if (data) break;
+        }
+
+        // If every round failed, throw the collected errors
+        if (!data) throw new Error(allErrors || 'No response from API');
+
+        // Restore the button text
+        btnText.textContent = '✨ Get recipes';
+
+        // Pull the text out of Gemini's reply
+        const text = data.candidates && data.candidates[0] && data.candidates[0].content
+          ? data.candidates[0].content.parts[0].text
+          : '';
+
+        // Parse the JSON from the AI
+        let recipes;
+        try {
+          recipes = JSON.parse(text).recipes;
+        } catch (parseErr) {
+          // If pure JSON didn't work, try to find a JSON block inside the text
+          const match = text.match(/\{[\s\S]*\}/);
+          if (!match) throw new Error('Could not understand the API response.');
+          recipes = JSON.parse(match[0]).recipes;
+        }
+
+        // Show the recipes on the page
+        renderRecipes(recipes);
+
+      } catch (err) {
+        console.error(err);
+        // Show a red error box that starts with the required phrase
+        showError('We couldn\'t get your recipes.\n' + (err.message || 'Something went wrong. Please try again.'));
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    getRecipesBtn.addEventListener('click', getRecipes);
+
+    // ------------------------------------------------------------------
+    // 9. SHOW / HIDE THE LOADING STATE
+    // ------------------------------------------------------------------
+    function showLoading(show) {
+      if (show) {
+        loadingSpinner.style.display = 'inline-flex';
+        if (btnText) btnText.style.display = 'none';
+        getRecipesBtn.disabled = true;
+      } else {
+        loadingSpinner.style.display = 'none';
+        if (btnText) btnText.style.display = 'inline';
+        getRecipesBtn.disabled = false;
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // 10. SHOW AN ERROR MESSAGE IN THE RED BOX
+    // ------------------------------------------------------------------
+    function showError(message) {
+      errorBox.textContent = message;
+      errorBox.style.display = 'block';
+    }
+
+    // ------------------------------------------------------------------
+    // 11. RENDER THE 3 RECIPE CARDS
+    // ------------------------------------------------------------------
+    function renderRecipes(recipes) {
+      resultsEl.innerHTML = '';
+
+      if (!recipes || recipes.length === 0) {
+        resultsEl.innerHTML = '<p style="text-align:center; color:#558b2f;">No recipes found. Try different ingredients or filters.</p>';
+        return;
+      }
+
+      // Three different gradient colors for the three cards
+      const gradientThemes = [
+        'linear-gradient(135deg, #4caf50, #2e7d32)',
+        'linear-gradient(135deg, #fb8c00, #e65100)',
+        'linear-gradient(135deg, #e53935, #b71c1c)'
+      ];
+
+      recipes.forEach((recipe, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        // Build the ingredients HTML: green background for "have", orange for "missing"
+        const ingredientsHtml = (recipe.ingredients || []).map(ing => {
+          const haveClass = ing.have ? 'have' : 'missing';
+          const needText = ing.have ? '' : '<span class="need">(need to get)</span>';
+          return `
+            <div class="ingredient-row ${haveClass}">
+              <span class="item">${escapeHtml(ing.item)}${needText}</span>
+              <span class="quantity">${escapeHtml(ing.quantity)}</span>
+            </div>
+          `;
+        }).join('');
+
+        // Build the steps HTML: numbered green circles
+        const stepsHtml = (recipe.steps || []).map((step, i) => `
+          <div class="step-item">
+            <div class="step-number">${i + 1}</div>
+            <div class="step-text">${escapeHtml(step)}</div>
+          </div>
+        `).join('');
+
+        // Set the background gradient based on card index
+        card.style.background = gradientThemes[index % 3] + '; color: #ffffff;';
+        // But we want the body white, so we only color the header. Reset body:
+        card.style.background = '#ffffff';
+        card.style.color = '#1b5e20';
+
+        card.innerHTML = `
+          <div class="card-header" style="background: ${gradientThemes[index % 3]};">
+            <h2>${escapeHtml(recipe.name)}</h2>
+            <div class="badges">
+              <span class="badge">⏱ ${escapeHtml(recipe.time)}</span>
+              <span class="badge">🍳 ${escapeHtml(recipe.style || 'Any')}</span>
+            </div>
+          </div>
+          <div class="ingredients-section">
+            <h3>Ingredients (for ${selectedServings})</h3>
+            <ul class="ingredients-list">${ingredientsHtml}</ul>
+          </div>
+          <div class="steps-section">
+            <h3>Instructions</h3>
+            <ol class="steps-list">${stepsHtml}</ol>
+          </div>
+        `;
+
+        resultsEl.appendChild(card);
+      });
+    }
+
+    // ------------------------------------------------------------------
+    // 12. HELPER: ESCAPE HTML (prevents code injection)
+    // ------------------------------------------------------------------
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ------------------------------------------------------------------
+    // 13. INITIALIZE THE PAGE
+    // ------------------------------------------------------------------
+    // Build the filter buttons with their default active states
+    function initFilterButtons() {
+      // Diet buttons
+      const diets = ['Any', 'Veg', 'Egg', 'Non-veg'];
+      dietBtns.innerHTML = '';
+      diets.forEach(d => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'filter-btn' + (selectedDiet === d ? ' active' : '');
+        b.textContent = d;
+        b.dataset.filter = 'diet';
+        b.dataset.value = d;
+        dietBtns.appendChild(b);
+      });
+
+      // Style buttons
+      const styles = ['Any', 'Fry/Sauté', 'Boil', 'Steam', 'Bake/Oven', 'Grill/Roast', 'Pressure cooker', 'One-pot', 'No-cook'];
+      styleBtns.innerHTML = '';
+      styles.forEach(s => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'filter-btn' + (selectedStyle === s ? ' active' : '');
+        b.textContent = s;
+        b.dataset.filter = 'style';
+        b.dataset.value = s;
+        styleBtns.appendChild(b);
+      });
+
+      // Servings buttons
+      const servings = [1, 2, 4, 6];
+      servingsBtns.innerHTML = '';
+      servings.forEach(s => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'filter-btn' + (selectedServings === s ? ' active' : '');
+        b.textContent = s;
+        b.dataset.filter = 'servings';
+        b.dataset.value = s;
+        servingsBtns.appendChild(b);
+      });
+
+      // Meal type buttons
+      const meals = ['Any', 'Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'];
+      mealBtns.innerHTML = '';
+      meals.forEach(m => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'filter-btn' + (selectedMeal === m ? ' active' : '');
+        b.textContent = m;
+        b.dataset.filter = 'meal';
+        b.dataset.value = m;
+        mealBtns.appendChild(b);
+      });
+
+      // Re-attach event listeners after rebuilding buttons
+      setupFilterButtons('diet');
+      setupFilterButtons('style');
+      setupFilterButtons('servings');
+      setupFilterButtons('meal');
+
+      // Set default dropdown values
+      timeFilter.value = selectedTime;
+      cuisineFilter.value = selectedCuisine;
+      spiceFilter.value = selectedSpice;
+    }
+
+    // Run everything when the page loads
+    renderChips();
+    initFilterButtons();
+
+  </script>
+</body>
+</html>

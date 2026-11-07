@@ -33,7 +33,7 @@ Categories: Food, Groceries, Transport, Shopping, Bills & Recharge, Health, Ente
 > This repo contains **no API key**. Each visitor uses their own key and pays for their own usage.
 > The key is saved only in that browser and sent directly from the browser to Anthropic.
 
-**Share the direct GitHub Pages link**, not the `spoo.me/...` short link. The short alias is just a redirect and may expire.
+**Share the direct GitHub Pages link** — `https://sreeharipraneeth16-cell.github.io/ai-expense-tracker/`. Short aliases are just redirects and may expire.
 
 ---
 
