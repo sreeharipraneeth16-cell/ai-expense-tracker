@@ -294,6 +294,31 @@
   .mic-status.warn { color: var(--amber); }
   .mic-status.error { color: var(--red); }
 
+  /* Mic inside the Add transaction dialog */
+  .input-with-mic { display: flex; align-items: center; gap: 8px; }
+  .input-with-mic input { flex: 1 1 auto; min-width: 0; }
+  .mic-inline {
+    flex: none;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 12px; border-radius: 10px;
+    background: rgba(215, 255, 79, .1);
+    border: 1px solid rgba(215, 255, 79, .45);
+    color: var(--lime); font-weight: 700; font-size: 12.5px;
+    white-space: nowrap;
+  }
+  .mic-inline:hover {
+    background: rgba(215, 255, 79, .16);
+    border-color: rgba(215, 255, 79, .65);
+  }
+  .mic-inline .mic-icon { font-size: 13px; line-height: 1; }
+  .mic-inline.listening {
+    background: rgba(215, 255, 79, .18);
+    border-color: rgba(215, 255, 79, .8);
+  }
+  .mic-inline.listening .mic-icon { animation: pulse 1s ease-in-out infinite; }
+  .mic-inline:disabled { cursor: not-allowed; opacity: .55; }
+  .field .mic-status { flex: none; margin-top: 6px; }
+
   .actions-row {
     display: flex; align-items: center; gap: 10px;
     flex-wrap: wrap; margin-top: 12px;
@@ -1057,7 +1082,15 @@
       </div>
       <div class="field full">
         <label for="mMerchant">Merchant / description</label>
-        <input id="mMerchant" type="text" placeholder="e.g. Swiggy dinner" maxlength="60" />
+        <div class="input-with-mic">
+          <input id="mMerchant" type="text" placeholder="e.g. Swiggy dinner" maxlength="60" />
+          <button id="merchantMicBtn" class="mic-inline" type="button" aria-pressed="false"
+            title="Say the shop or description — no API key needed">
+            <span id="merchantMicIcon" class="mic-icon" aria-hidden="true">🎤</span>
+            <span id="merchantMicLabel">Speak</span>
+          </button>
+        </div>
+        <span id="merchantMicStatus" class="mic-status" role="status" aria-live="polite">Or tap 🎤 Speak and say the shop name — no API key needed.</span>
       </div>
       <div class="field">
         <label for="mType">Type</label>
@@ -1710,6 +1743,8 @@ function closeModal(id) {
   // Leaving the transaction dialog always returns it to "add" mode,
   // so a cancelled edit can never bleed into the next open.
   if (id === "addModal") {
+    // Don't let a mic keep typing into a hidden dialog.
+    if (listening && dictationTarget === "merchant") stopDictation(true);
     editingId = null;
     pendingPhoto = false;
   }
@@ -2562,36 +2597,90 @@ document.addEventListener("paste", function (event) {
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+// Each mic has its own input and its own status line. One speech
+// engine drives both, so only one mic listens at a time.
+const MIC_TARGETS = {
+  sms: {
+    input: "smsInput",
+    button: "micBtn",
+    icon: "micIcon",
+    label: "micLabel",
+    status: "micStatus",
+    idleLabel: "Dictate",
+    idleStatus: "Speak a bank message — it types itself. No API key needed.",
+    listeningStatus: "Listening — speak now.",
+    stoppedStatus: "Stopped. Tap Dictate to speak again."
+  },
+  merchant: {
+    input: "mMerchant",
+    button: "merchantMicBtn",
+    icon: "merchantMicIcon",
+    label: "merchantMicLabel",
+    status: "merchantMicStatus",
+    idleLabel: "Speak",
+    idleStatus: "Or tap 🎤 Speak and say the shop name — no API key needed.",
+    listeningStatus: "Listening — say the shop name.",
+    stoppedStatus: "Stopped. Tap Speak to say the name again."
+  }
+};
+
 let recognition = null;
 let listening = false;
+let dictationTarget = "sms";
 let restartCount = 0;
 let triedFallbackLanguage = false;
 
-function setMicStatus(text, state) {
-  const box = $("micStatus");
+function micTarget(key) {
+  return MIC_TARGETS[key || dictationTarget] || MIC_TARGETS.sms;
+}
+
+function setMicStatus(text, state, key) {
+  const config = micTarget(key);
+  const box = $(config.status);
   if (!box) return;
   box.textContent = text;
   box.className = "mic-status" + (state ? " " + state : "");
 }
 
-function setMicUi(on) {
-  const button = $("micBtn");
+function setMicUi(on, key) {
+  const config = micTarget(key);
+  const button = $(config.button);
+  if (!button) return;
+
   button.classList.toggle("listening", on);
   button.setAttribute("aria-pressed", on ? "true" : "false");
-  $("micIcon").textContent = on ? "●" : "🎤";
-  $("micLabel").textContent = on ? "Listening…" : "Dictate";
+
+  const icon = $(config.icon);
+  if (icon) icon.textContent = on ? "●" : "🎤";
+
+  const label = $(config.label);
+  if (label) label.textContent = on ? "Listening…" : config.idleLabel;
 }
 
-// Add a spoken phrase to the message box, keeping a gap between phrases.
+// Add a spoken phrase to the active input, keeping a gap between phrases.
 function insertDictation(text) {
   const clean = String(text || "").replace(/\s+/g, " ").trim();
   if (!clean) return;
 
-  const box = $("smsInput");
+  const box = $(micTarget().input);
   let value = box.value;
   if (value && !/\s$/.test(value)) value += " ";
-  box.value = value + clean;
-  box.scrollTop = box.scrollHeight;
+  value += clean;
+
+  // Keep within the field's limit (dictation bypasses typing rules).
+  if (box.maxLength > 0 && value.length > box.maxLength) {
+    value = value.slice(0, box.maxLength);
+  }
+
+  box.value = value;
+  if (box.tagName === "TEXTAREA") box.scrollTop = box.scrollHeight;
+}
+
+// Put one mic back to its idle look (used when dialogs open or close).
+function resetMic(key) {
+  if (listening && dictationTarget === (key || "sms")) stopDictation(true);
+  setMicUi(false, key);
+  setMicStatus(micTarget(key).idleStatus, "", key);
 }
 
 function buildRecognition() {
@@ -2615,7 +2704,7 @@ function buildRecognition() {
     }
 
     if (interim) setMicStatus("Listening… " + interim, "listening");
-    else if (listening) setMicStatus("Listening — speak now.", "listening");
+    else if (listening) setMicStatus(micTarget().listeningStatus, "listening");
   };
 
   instance.onerror = function (event) {
@@ -2635,7 +2724,7 @@ function buildRecognition() {
     if (code === "not-allowed" || code === "service-not-allowed") {
       setMicStatus("Microphone blocked. Allow it in the browser's site settings, then try again.", "error");
     } else if (code === "no-speech") {
-      setMicStatus("Didn't hear anything — tap Dictate and try again.", "warn");
+      setMicStatus("Didn't hear anything — tap " + micTarget().idleLabel + " and try again.", "warn");
     } else if (code === "audio-capture") {
       setMicStatus("No microphone found on this device.", "error");
     } else if (code === "network") {
@@ -2659,21 +2748,33 @@ function buildRecognition() {
 
     listening = false;
     setMicUi(false);
-    setMicStatus("Stopped listening. Tap Dictate to continue.", "");
+    setMicStatus(micTarget().stoppedStatus, "");
   };
 
   return instance;
 }
 
-function startDictation() {
+function startDictation(key) {
   if (!SpeechRecognition) return;
+  key = key || "sms";
 
   // The microphone needs HTTPS (or localhost). Plain http://LAN-IP won't work.
   if (!window.isSecureContext) {
-    setMicStatus("Microphone needs a secure page — use the HTTPS GitHub Pages link, or localhost.", "warn");
+    setMicStatus("Microphone needs a secure page — use the HTTPS GitHub Pages link, or localhost.", "warn", key);
     return;
   }
 
+  // If the other mic is already listening, just move the words there.
+  if (listening && dictationTarget !== key) {
+    setMicUi(false, dictationTarget);
+    setMicStatus(micTarget(dictationTarget).idleStatus, "", dictationTarget);
+    dictationTarget = key;
+    setMicUi(true, key);
+    setMicStatus(micTarget(key).listeningStatus, "listening", key);
+    return;
+  }
+
+  dictationTarget = key;
   if (!recognition) recognition = buildRecognition();
 
   try {
@@ -2682,18 +2783,19 @@ function startDictation() {
     triedFallbackLanguage = false;
     restartCount = 0;
     hideError();
-    setMicUi(true);
-    setMicStatus("Listening — speak now.", "listening");
+    setMicUi(true, key);
+    setMicStatus(micTarget(key).listeningStatus, "listening", key);
   } catch (err) {
     // "already started" is harmless.
     if (String(err && err.name) === "InvalidStateError") return;
     listening = false;
-    setMicUi(false);
-    setMicStatus("Couldn't start the microphone. Please try again.", "error");
+    setMicUi(false, key);
+    setMicStatus("Couldn't start the microphone. Please try again.", "error", key);
   }
 }
 
-function stopDictation() {
+function stopDictation(silent) {
+  const config = micTarget();
   listening = false;
   setMicUi(false);
 
@@ -2701,25 +2803,33 @@ function stopDictation() {
     try { recognition.stop(); } catch (err) { /* already stopped */ }
   }
 
-  setMicStatus("Stopped. Tap Dictate to speak again.", "");
+  setMicStatus(silent ? config.idleStatus : config.stoppedStatus, "");
 }
 
-function toggleDictation() {
+function toggleDictation(key) {
   if (!SpeechRecognition) return;
-  if (listening) stopDictation();
-  else startDictation();
+  key = key || "sms";
+  if (listening && dictationTarget === key) stopDictation();
+  else startDictation(key);
 }
 
 if (SpeechRecognition) {
-  $("micBtn").addEventListener("click", toggleDictation);
+  $("micBtn").addEventListener("click", function () { toggleDictation("sms"); });
+  $("merchantMicBtn").addEventListener("click", function () { toggleDictation("merchant"); });
 } else {
   $("micBtn").disabled = true;
+  $("merchantMicBtn").disabled = true;
+
   if (!window.isSecureContext) {
     $("micBtn").title = "Microphone needs an HTTPS page";
-    setMicStatus("Microphone needs a secure page. On your phone use the HTTPS link (GitHub Pages), or localhost on this PC.", "warn");
+    $("merchantMicBtn").title = "Microphone needs an HTTPS page";
+    setMicStatus("Microphone needs a secure page. On your phone use the HTTPS link (GitHub Pages), or localhost on this PC.", "warn", "sms");
+    setMicStatus("Microphone needs a secure page — type the name instead.", "warn", "merchant");
   } else {
     $("micBtn").title = "Dictation needs Chrome, Edge or Safari";
-    setMicStatus("This browser can't dictate. Use Chrome, Edge or Safari.", "warn");
+    $("merchantMicBtn").title = "Dictation needs Chrome, Edge or Safari";
+    setMicStatus("This browser can't dictate. Use Chrome, Edge or Safari.", "warn", "sms");
+    setMicStatus("This browser can't dictate — type the name instead.", "warn", "merchant");
   }
 }
 
@@ -3025,6 +3135,10 @@ function openAddModal() {
   $("mType").value = "debit";
   $("mCategory").value = "Other";
 
+  // Stop any dictation and put the merchant mic back to idle.
+  if (listening) stopDictation(true);
+  resetMic("merchant");
+
   openModal("addModal");
   setTimeout(function () {
     $("mAmount").focus({ preventScroll: true });
@@ -3047,6 +3161,9 @@ function openEditModal(id) {
   $("mMerchant").value = transaction.merchant;
   $("mType").value = transaction.type;
   $("mCategory").value = transaction.category;
+
+  if (listening) stopDictation(true);
+  resetMic("merchant");
 
   openModal("addModal");
   setTimeout(function () {

@@ -11,7 +11,7 @@ Everything is one HTML file — no build step, no framework, no backend needed f
 ## Features
 
 - **Paste bank SMS → structured transactions.** Claude extracts the date, merchant, amount, debit/credit and category, and skips OTPs, ads and balance alerts.
-- **Dictate instead of typing.** Tap 🎤 **Dictate** and speak — your words appear in the box. Uses the browser's speech recognition; no API key.
+- **Dictate instead of typing.** Tap 🎤 **Dictate** in AI import, or 🎤 **Speak** next to the merchant field in Add transaction, and talk — your words appear in the box. Uses the browser's speech recognition; no API key.
 - **Scan a bill by photo.** Take a picture (or drop/paste an image) and the app fills in the shop, total, date and category — **no API key needed**. Add a key and Claude reads it instead for better accuracy.
 - **Editable table.** Change any category from a dropdown, or edit/delete from Recent activity.
 - **Summary dashboard.** Total spent/received, spending donut, daily/monthly trend chart and category bars.
@@ -69,6 +69,19 @@ The on-device reader downloads once (~15 MB) the first time you use it, then the
 - Works in **Chrome, Edge and Safari**. Firefox doesn't implement it, so the button shows *"This browser can't dictate"*.
 - No API key is involved. Recognition is set to **English (India)** and falls back to English (US) if needed.
 - The browser's speech service does the listening. In Chrome, audio is processed by Google; the app itself never records or stores audio.
+
+### Dictate the shop name in Add transaction
+
+The **Merchant / description** field has its own **🎤 Speak** button, so a cash purchase can be spoken too:
+
+1. Click **+ Add transaction**
+2. Tap **🎤 Speak**, say the shop or description (e.g. *"Cafe Mocha"*), and tap **Listening…** to stop
+3. The words appear in the field; add the amount and save
+
+- Also works when **editing** an existing transaction.
+- The two mics share one engine, so only one listens at a time — starting one stops the other.
+- Closing the dialog stops the mic automatically, and no API key is needed here either.
+- Amount is typed rather than spoken, because speech-to-number is unreliable (e.g. "four fifty" could mean 4.50 or 450).
 
 ---
 
