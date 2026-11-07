@@ -1,6 +1,6 @@
-# Expences Tracker
+# Expenses Tracker
 
-**Expences Tracker** is a dark, fintech-style expense tracker that reads Indian bank SMS with **Claude** and turns them into clean, editable transactions. It also scans bills, takes dictation, and works without an API key for those two features.
+**Expenses Tracker** is a dark, fintech-style expense tracker that reads Indian bank SMS with **Claude** and turns them into clean, editable transactions. It also scans bills, takes dictation, and works without an API key for those two features.
 
 Everything is one HTML file — no build step, no framework, no backend needed for normal use. Your transactions and API key stay in **your own browser**.
 
