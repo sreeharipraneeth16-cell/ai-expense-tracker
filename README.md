@@ -1,10 +1,10 @@
-# AI Expense Tracker
+# Expences Tracker
 
-A dark, fintech-style expense tracker that reads Indian bank SMS with **Claude** and turns them into clean, editable transactions.
+**Expences Tracker** is a dark, fintech-style expense tracker that reads Indian bank SMS with **Claude** and turns them into clean, editable transactions. It also scans bills, takes dictation, and works without an API key for those two features.
 
 Everything is one HTML file — no build step, no framework, no backend needed for normal use. Your transactions and API key stay in **your own browser**.
 
-**Live demo:** https://sreeharipraneeth16-cell.github.io/ai-expense-tracker/
+**Live website:** https://sreeharipraneeth16-cell.github.io/ai-expense-tracker/
 
 ---
 
@@ -23,7 +23,7 @@ Categories: Food, Groceries, Transport, Shopping, Bills & Recharge, Health, Ente
 
 ---
 
-## Use the live demo
+## Use the live website
 
 1. Open https://sreeharipraneeth16-cell.github.io/ai-expense-tracker/
 2. Click **API key** and paste **your own** Anthropic key (`sk-ant-...`) — optional. You only need it for SMS; **bill scanning works without a key**.
@@ -126,7 +126,7 @@ New transactions appear with an **AUTO** tag and can still be edited or deleted 
 
 - Android only — iOS blocks apps from reading SMS.
 - Phone and PC must be on the same Wi-Fi, and the PC must stay on.
-- GitHub Pages cannot run Python, so on the hosted demo the switch shows **Local only**.
+- GitHub Pages cannot run Python, so on the hosted website the switch shows **Local only**.
 - The relay has no password; use it only on a trusted home network.
 
 ---
