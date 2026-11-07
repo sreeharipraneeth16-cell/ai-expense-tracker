@@ -1,9 +1,9 @@
 @echo off
-title AI Expense Tracker - keep this window open
+title Expenses Tracker - keep this window open
 cd /d "%~dp0"
 start "" /min cmd /c "timeout /t 2 /nobreak >nul & start http://localhost:8000/"
 echo.
-echo  AI Expense Tracker is running at:
+echo  Expenses Tracker is running at:
 echo  http://localhost:8000/
 echo.
 echo  Live SMS auto-import listens at:

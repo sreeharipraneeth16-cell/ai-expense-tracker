@@ -6,6 +6,21 @@
 <meta name="color-scheme" content="dark" />
 <title>Expenses Tracker — AI Expense Tracker</title>
 
+<!--
+  Content Security Policy.
+  - Only this site's own scripts/styles, the Claude API, and the OCR
+    download needed for no-key bill scanning are allowed.
+  - 'unsafe-inline' is required because this is a single-file app:
+    all CSS and JavaScript live inside this HTML file.
+  - Tesseract.js is fetched from jsDelivr only when you tap "On-device".
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.anthropic.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com http://localhost:8000 http://127.0.0.1:8000; worker-src 'self' blob: https://cdn.jsdelivr.net; child-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'self'; manifest-src 'self'" />
+
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+
 <!-- Website identity -->
 <meta name="description" content="Expenses Tracker is a private, AI-powered expense tracker for India. Paste bank SMS, scan bills, or dictate a purchase — transactions are sorted automatically and stay in your browser." />
 <meta name="application-name" content="Expenses Tracker" />
@@ -44,7 +59,7 @@
 </script>
 
 <!--
-  EXPENCES TRACKER — dark dashboard edition
+  EXPENSES TRACKER — dark dashboard edition
 
   No API key is stored in this file.
   Each person adds their own key in the "Your Claude API key" dialog
@@ -715,6 +730,149 @@
   }
   .field input::placeholder { color: #5f6270; }
 
+  /* ============ 10b. SAFETY, REVIEW, LOCK & ABOUT ============ */
+  .banner {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 12px 14px; border-radius: 14px;
+    border: 1px solid rgba(251, 191, 36, .35);
+    background: rgba(251, 191, 36, .08);
+    color: #fde68a; font-size: 12.5px; line-height: 1.5;
+  }
+  .banner b { color: var(--amber); }
+  .banner-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .btn.danger {
+    background: rgba(255, 107, 120, .12);
+    border-color: rgba(255, 107, 120, .35);
+    color: #ff98a1;
+  }
+  .btn.danger:hover {
+    background: rgba(255, 107, 120, .2);
+    border-color: rgba(255, 107, 120, .55);
+  }
+
+  .data-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .data-box {
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px;
+  }
+  .data-box h3 { margin: 0 0 6px; font-size: 13px; }
+  .data-box p { margin: 0 0 10px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .data-box .actions-row { margin-top: 0; }
+  .small-muted { color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+  .warning-note {
+    border-left: 3px solid var(--amber); border-radius: 0 8px 8px 0;
+    padding: 9px 12px; background: rgba(251, 191, 36, .07);
+    color: #fde68a; font-size: 12px; line-height: 1.55;
+  }
+
+  .check-line {
+    display: flex; align-items: flex-start; gap: 9px;
+    margin: 12px 0 4px; font-size: 12.5px; color: var(--text); cursor: pointer;
+  }
+  .check-line input { margin: 2px 0 0; accent-color: var(--lime); flex: none; }
+
+  .tag.review { background: rgba(251, 191, 36, .16); color: #fde68a; }
+  .tag.dup { background: rgba(255, 107, 120, .14); color: #ff98a1; }
+
+  .modal-card.wide { width: min(880px, 100%); }
+  .review-list { display: flex; flex-direction: column; gap: 10px; }
+  .review-item {
+    border: 1px solid var(--line); background: var(--panel-2);
+    border-radius: 12px; padding: 12px;
+  }
+  .review-item.needs { border-color: rgba(251, 191, 36, .45); }
+  .review-item.skipped { opacity: .55; }
+  .review-top {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .review-top label {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-weight: 700; font-size: 13px; cursor: pointer;
+  }
+  .review-top input[type="checkbox"] { accent-color: var(--lime); width: 15px; height: 15px; }
+  .review-note { color: var(--amber); font-size: 11.5px; margin-left: auto; }
+  .review-grid {
+    display: grid;
+    grid-template-columns: 1fr .75fr 1.35fr .8fr 1fr;
+    gap: 8px;
+  }
+  .review-grid .field { gap: 4px; }
+  .review-grid .field label { font-size: 9.5px; }
+  .review-grid input, .review-grid select {
+    width: 100%; padding: 8px 9px; font: inherit; font-size: 12.5px;
+    background: #101013; color: var(--text);
+    border: 1px solid var(--line); border-radius: 9px;
+  }
+  .review-grid input:focus, .review-grid select:focus {
+    outline: none; border-color: rgba(215, 255, 79, .45);
+    box-shadow: 0 0 0 3px rgba(215, 255, 79, .08);
+  }
+  .review-foot {
+    display: flex; justify-content: flex-end; gap: 8px;
+    flex-wrap: wrap; margin-top: 14px;
+  }
+  .preview-box {
+    background: #101013; border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px; font: 12px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+    white-space: pre-wrap; word-break: break-word;
+    max-height: 300px; overflow: auto; color: #dfe3ea;
+  }
+
+  .about h3 { margin: 18px 0 6px; font-size: 13px; }
+  .about p, .about li { color: var(--muted); font-size: 12.5px; line-height: 1.65; }
+  .about code {
+    background: #101013; border: 1px solid var(--line); border-radius: 5px;
+    padding: 1px 5px; font-size: 11.5px;
+  }
+  .about a { color: var(--lime); text-decoration: underline; text-underline-offset: 2px; }
+  .note-list { margin: 8px 0 0; padding-left: 18px; }
+  .note-list li { margin: 5px 0; }
+
+  /* Full-screen PIN lock (shown before any data is decrypted). */
+  body.locked .shell { display: none; }
+  .lock-screen {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    background:
+      radial-gradient(800px 480px at 15% -10%, rgba(215, 255, 79, .08), transparent 60%),
+      radial-gradient(700px 420px at 100% 0%, rgba(47, 227, 199, .07), transparent 55%),
+      var(--bg);
+  }
+  .lock-card {
+    width: min(400px, 100%);
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 20px; padding: 26px;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, .5);
+  }
+  .lock-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    display: grid; place-items: center; margin-bottom: 16px;
+    background: rgba(215, 255, 79, .12);
+    border: 1px solid rgba(215, 255, 79, .3);
+    font-size: 22px;
+  }
+  .lock-card h2 { margin: 0 0 6px; font-size: 19px; letter-spacing: -.02em; }
+  .pin-input {
+    width: 100%; margin: 16px 0 10px;
+    text-align: center; letter-spacing: .35em;
+    font-size: 20px; font-weight: 700;
+    background: #101013; color: var(--text);
+    border: 1px solid var(--line); border-radius: 12px;
+    padding: 13px 12px;
+  }
+  .pin-input:focus {
+    outline: none; border-color: rgba(215, 255, 79, .5);
+    box-shadow: 0 0 0 4px rgba(215, 255, 79, .08);
+  }
+  .lock-msg { min-height: 1em; margin: 10px 0 0; font-size: 12.5px; font-weight: 600; color: var(--green); }
+  .lock-msg.error { color: var(--red); }
+
   /* ============ 11. RESPONSIVE ============ */
   @media (max-width: 1180px) {
     .shell { grid-template-columns: 236px minmax(0, 1fr); }
@@ -756,6 +914,10 @@
     .search { flex: 1; }
     .search input { width: 100%; }
     .status { margin-left: 0; width: 100%; }
+    .banner-actions { margin-left: 0; width: 100%; }
+    .data-grid { grid-template-columns: 1fr; }
+    .review-grid { grid-template-columns: 1fr 1fr; }
+    .review-grid .field:nth-child(3) { grid-column: 1 / -1; }
 
     /* Table becomes stacked cards */
     .table-wrap table { min-width: 0; }
@@ -785,6 +947,9 @@
     .form-grid { grid-template-columns: 1fr; }
     .stat-card { flex-direction: column; align-items: flex-start; }
     .donut-wrap { align-self: center; }
+    .review-grid { grid-template-columns: 1fr; }
+    .review-grid .field:nth-child(3) { grid-column: auto; }
+    .review-foot .btn { flex: 1 1 auto; }
   }
 </style>
 </head>
@@ -807,6 +972,8 @@
       <a class="nav-item" href="#analytics"><span class="nav-icon" aria-hidden="true">◈</span>Analytics</a>
       <a class="nav-item" href="#history"><span class="nav-icon" aria-hidden="true">▤</span>Transactions</a>
       <a class="nav-item" href="#import"><span class="nav-icon" aria-hidden="true">✦</span>AI import</a>
+      <a class="nav-item" href="#data"><span class="nav-icon" aria-hidden="true">🛟</span>Data safety</a>
+      <a class="nav-item" href="#about"><span class="nav-icon" aria-hidden="true">ⓘ</span>Privacy</a>
     </nav>
 
     <!-- API key status lives here: quick way to add or change your key -->
@@ -822,6 +989,15 @@
     <div class="side-foot">
       <button id="exportBtn" class="side-btn" type="button">
         <span aria-hidden="true">⤓</span> Export CSV
+      </button>
+      <button id="sidebarBackupBtn" class="side-btn" type="button">
+        <span aria-hidden="true">🛟</span> Backup
+      </button>
+      <button id="sidebarRestoreBtn" class="side-btn" type="button">
+        <span aria-hidden="true">↺</span> Restore
+      </button>
+      <button id="lockBtn" class="side-btn" type="button">
+        <span aria-hidden="true">🔒</span> <span id="lockBtnLabel">App lock: off</span>
       </button>
     </div>
   </aside>
@@ -858,12 +1034,21 @@
     </header>
 
     <main class="content">
+      <!-- Gentle reminder shown when the last JSON backup is 14+ days old. -->
+      <div id="backupBanner" class="banner" role="status" hidden>
+        <span>🛟 <b>No recent backup.</b> Your data lives only in this browser.</span>
+        <span class="banner-actions">
+          <button id="bannerBackupBtn" class="btn primary small" type="button">Back up now</button>
+          <button id="bannerDismissBtn" class="btn ghost small" type="button">Later</button>
+        </span>
+      </div>
+
       <!-- ============ AI IMPORT ============ -->
       <section class="card import-card" id="import" aria-labelledby="importTitle">
         <div class="card-head">
           <div class="head-text">
             <h2 id="importTitle">✦ AI import</h2>
-            <p class="hint">Paste a bank message, or tap <b>Dictate</b> and speak — no API key needed. OTPs, ads and balance alerts are skipped automatically.</p>
+            <p class="hint">Paste a bank message, or tap <b>Dictate</b> and speak — no API key needed. OTPs, ads and balance alerts are skipped. Pasted text is sent to Anthropic when you tap Categorize.</p>
           </div>
           <button id="micBtn" class="btn mic-btn" type="button" aria-pressed="false">
             <span id="micIcon" class="mic-icon" aria-hidden="true">🎤</span>
@@ -875,12 +1060,13 @@
         <textarea id="smsInput" spellcheck="false" placeholder="Rs.450.00 debited from A/c XX1234 at SWIGGY on 03-11-26&#10;Rs.25,000.00 credited to A/c XX1234 from ACME SALARY on 01-11-26"></textarea>
 
         <div class="dictate-bar">
-          <span id="micStatus" class="mic-status" role="status" aria-live="polite">Speak a bank message — it types itself. No API key needed.</span>
+          <span id="micStatus" class="mic-status" role="status" aria-live="polite">Speak a bank message — it types itself. Chrome may send audio to Google.</span>
         </div>
 
         <div class="actions-row">
           <button id="categorizeBtn" class="btn primary" type="button">✦ Categorize with AI</button>
           <button id="sampleBtn" class="btn ghost" type="button">Load sample</button>
+          <button id="privacyPreviewBtn" class="btn ghost small" type="button" title="See the masked text before it is sent">What gets sent to Claude</button>
           <span id="status" class="status" role="status" aria-live="polite"></span>
         </div>
 
@@ -890,7 +1076,7 @@
             <span class="scan-icon" aria-hidden="true">📷</span>
             <span class="scan-text">
               <b>Scan a bill or receipt</b>
-              <small>Take a photo or drop an image — no API key needed. Claude reads it if you have a key, otherwise it reads on your device.</small>
+              <small>Take a photo or drop an image — no API key needed. With a key, Claude reads it; otherwise it is read on your device (may be less accurate).</small>
             </span>
             <input id="billInput" type="file" accept="image/*" capture="environment" hidden />
           </label>
@@ -906,6 +1092,7 @@
               title="Read the photo on this device — no API key, and the photo never leaves your browser">On-device</button>
             <span id="scanStatus" class="scan-status" role="status" aria-live="polite">No photo yet.</span>
           </div>
+          <p class="small-muted" style="margin:0">On-device reading may be less accurate. You review and edit every field before saving.</p>
         </div>
 
         <!-- Live auto-import: watches the local server for bank SMS -->
@@ -915,11 +1102,12 @@
             <span class="switch-track" aria-hidden="true"><span class="switch-knob"></span></span>
             <span class="switch-label">
               <b>Live auto-import</b>
-              <small id="autoHint">Checking for the SMS relay…</small>
+              <small id="autoHint">Off by default · local helper only</small>
             </span>
           </label>
           <button id="autoCheckBtn" class="btn ghost small" type="button" hidden>Check now</button>
-          <span id="autoStatus" class="auto-status">Off</span>
+          <button id="autoInfoBtn" class="btn ghost small" type="button">How it works</button>
+          <span id="autoStatus" class="auto-status">Off (default)</span>
         </div>
 
         <div id="errorBox" class="alert" role="alert" hidden></div>
@@ -1024,8 +1212,124 @@
         <p class="empty" id="emptyState" hidden></p>
       </section>
 
+      <!-- ============ DATA SAFETY ============ -->
+      <section class="card" id="data" aria-labelledby="dataTitle">
+        <div class="card-head">
+          <div class="head-text">
+            <h2 id="dataTitle">🛟 Data safety</h2>
+            <p class="hint">A backup is the only way to recover your data if this browser clears it.</p>
+          </div>
+          <span class="pill" id="dataCount">0 transactions</span>
+        </div>
+
+        <div class="data-grid">
+          <div class="data-box">
+            <h3>Backup</h3>
+            <p>Download every transaction and learned category rule as one JSON file. Your API key and lock PIN are never included.</p>
+            <button id="backupBtn" class="btn primary small" type="button">Download backup</button>
+            <p class="small-muted" id="lastBackupText" style="margin-top:10px">No backup yet.</p>
+          </div>
+
+          <div class="data-box">
+            <h3>Restore</h3>
+            <p>Load a backup file. You can merge it with this browser or replace everything after a confirmation.</p>
+            <button id="restoreBtn" class="btn ghost small" type="button">Choose backup file…</button>
+            <input id="restoreInput" type="file" accept="application/json,.json" hidden />
+            <p class="small-muted" id="restoreStatus" style="margin-top:10px">Nothing restored yet.</p>
+          </div>
+
+          <div class="data-box">
+            <h3>Storage protection</h3>
+            <p>Browsers may clear site data when space is low. Persistent storage makes that less likely.</p>
+            <p class="small-muted" id="persistState">Checking…</p>
+            <button id="persistBtn" class="btn ghost small" type="button">Ask browser to protect data</button>
+          </div>
+
+          <div class="data-box">
+            <h3>Delete everything</h3>
+            <p>Removes transactions, learned categories, API key, lock and settings from this browser. Backup files on your device are not touched.</p>
+            <button id="deleteAllBtn" class="btn danger small" type="button">Delete all my data</button>
+          </div>
+        </div>
+
+        <p class="warning-note" style="margin-top:12px">
+          Clearing your browser's site data, using a private window, or uninstalling the browser deletes everything.
+          Keep a JSON backup somewhere safe.
+        </p>
+      </section>
+
+      <!-- ============ ABOUT / PRIVACY ============ -->
+      <section class="card about" id="about" aria-labelledby="aboutTitle">
+        <div class="card-head">
+          <div class="head-text">
+            <h2 id="aboutTitle">About / Privacy</h2>
+            <p class="hint">Where your data lives and exactly when it leaves this browser.</p>
+          </div>
+        </div>
+
+        <h3>Where your data lives</h3>
+        <p>
+          Transactions, learned category rules, settings and your API key are stored in this browser only.
+          There is no account and no server that keeps your ledger.
+        </p>
+
+        <h3>When data leaves your browser</h3>
+        <ul class="note-list">
+          <li><b>Categorize with AI:</b> pasted text is masked on your device first. Emails, phone numbers and UPI IDs are replaced; account/card numbers keep only the last 4 digits. The masked text is then sent to <b>Anthropic</b> at <code>api.anthropic.com</code> using <code>claude-haiku-5-5</code>.</li>
+          <li><b>Scan a bill:</b> if a key is saved, the resized photo is sent to Anthropic as-is. Text inside a photo cannot be masked. On-device scans never leave your browser.</li>
+          <li><b>Dictation:</b> uses your browser's speech service. Chrome may send audio to Google. The app never records or stores audio.</li>
+          <li><b>On-device OCR:</b> downloads Tesseract.js from <code>cdn.jsdelivr.net</code> the first time; the photo stays in your browser.</li>
+          <li><b>No analytics, ads or tracking.</b></li>
+        </ul>
+
+        <h3>What is never sent</h3>
+        <p>
+          Your saved transactions, category history, backups and lock PIN are never sent anywhere.
+          The API key is sent only in the request header to Anthropic, never inside the message text.
+        </p>
+
+        <h3>Sharing the app</h3>
+        <p>
+          Share the direct link
+          <a href="https://sreeharipraneeth16-cell.github.io/ai-expense-tracker/" target="_blank" rel="noopener">https://sreeharipraneeth16-cell.github.io/ai-expense-tracker/</a>
+          instead of the <code>spoo.me</code> short link. The short link is a third-party redirect and may expire.
+        </p>
+
+        <h3>iPhone and SMS</h3>
+        <p>
+          iOS does not let websites or apps read SMS automatically. Copy the bank message from Messages and paste it into AI import.
+          If you run the local relay, an iOS Shortcut can POST text to <code>http://YOUR-PC-IP:8000/api/sms</code> while your phone is on the
+          same Wi-Fi — but iOS still cannot read the SMS for you. The Shortcut needs the message text copied, shared or dictated first.
+        </p>
+
+        <h3>Live auto-import (optional)</h3>
+        <p>
+          A helper Python script on your computer receives SMS text from a forwarding app on your phone. This page polls that helper
+          every 8 seconds, masks the text, and — only if you have a key — sends it to Anthropic. Messages are stored unencrypted in
+          <code>%TEMP%\expense-tracker-inbox.json</code> on your PC (newest 500), and this page stores only the last-read id.
+          No third-party server is involved beyond Anthropic. The forwarding app may use its own cloud service — check its privacy policy.
+          The helper has no password, so use it only on trusted Wi-Fi and stop it when you are done.
+        </p>
+
+        <h3>App lock</h3>
+        <p>
+          The optional PIN lock encrypts stored transactions with AES-GCM, using a key derived from your PIN with PBKDF2.
+          If you forget the PIN, the data cannot be recovered unless you have a JSON backup. Backups are plain JSON, so store them safely.
+          App lock protects casual access; it cannot stop someone who fully controls your browser or device.
+        </p>
+
+        <h3>Backups and clearing data</h3>
+        <p>
+          Use <b>Backup</b> regularly. Clearing site data or using a private window deletes this browser's copy.
+          <b>Delete all my data</b> removes it immediately after confirmation.
+        </p>
+
+        <p class="small-muted">Last reviewed: 7 November 2026. This is a plain-language explanation, not legal advice.</p>
+      </section>
+
       <p class="footer-note">
-        <b>Expenses Tracker</b> · Your API key and expense data stay only in this browser. Clearing browser data removes both.
+        <b>Expenses Tracker</b> · Data is saved in this browser. Pasted text and bill photos are sent to Anthropic only when you choose
+        Categorize or Scan. Clearing browser data removes everything — keep a backup.
       </p>
     </main>
   </div>
@@ -1079,10 +1383,13 @@
     </div>
 
     <p class="key-note">
-      This app doesn't include a key. Your key is saved only in this browser and sent
-      directly to Anthropic &mdash; it is never written into this file.
-      <strong>Scanning a bill works without a key</strong> — a key is only needed to
-      read pasted SMS.
+      This app doesn't include a key. Your key is saved only in this browser (or this tab, if you choose)
+      and sent directly to Anthropic. It is never written into this file or included in backups.
+      <strong>Scanning a bill works without a key</strong> — a key is only needed to read pasted SMS.
+    </p>
+    <p class="key-note">
+      When you tap <b>Categorize</b>, the pasted text is sent to Anthropic. When you scan a bill with a key,
+      that photo is sent to Anthropic. Nothing is sent until you click those buttons.
     </p>
 
     <div class="key-controls">
@@ -1091,6 +1398,12 @@
       <button id="saveKeyBtn" class="btn primary" type="button">Save key</button>
       <button id="forgetKeyBtn" class="btn ghost" type="button" hidden>Forget</button>
     </div>
+
+    <label class="check-line" for="rememberKey">
+      <input id="rememberKey" type="checkbox" checked />
+      <span>Keep this key after I close the browser</span>
+    </label>
+    <p class="small-muted" style="margin:0">Unchecked = session only. Safer on a shared computer.</p>
 
     <p id="keyMessage" class="key-message" role="status" aria-live="polite"></p>
 
@@ -1147,6 +1460,145 @@
         <button id="addSubmitBtn" class="btn primary full" type="submit">Add transaction</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ============ REVIEW BEFORE SAVING ============ -->
+<div id="reviewModal" class="modal" hidden>
+  <div class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="reviewTitle">Review before saving</h2>
+        <p class="hint" id="reviewHint">Check each row. Yellow rows need a second look.</p>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+    </div>
+    <div id="reviewList" class="review-list"></div>
+    <p class="hint" id="reviewSummary" style="margin-top:12px"></p>
+    <div class="review-foot">
+      <button id="reviewCancelBtn" class="btn ghost" type="button">Cancel</button>
+      <button id="reviewSaveBtn" class="btn primary" type="button">Add selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ WHAT GETS SENT TO CLAUDE ============ -->
+<div id="privacyModal" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="privacyTitle">What gets sent to Claude</h2>
+        <p class="hint">This is the exact text after masking on your device.</p>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+    </div>
+    <div id="privacyBody"></div>
+  </div>
+</div>
+
+<!-- ============ AUTO-IMPORT EXPLANATION / OPT-IN ============ -->
+<div id="autoModal" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="autoTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="autoTitle">How live auto-import works</h2>
+        <p class="hint">Off by default. You must turn it on each time.</p>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+    </div>
+
+    <p class="key-note"><b>What it does:</b> a small Python helper on your computer receives SMS text from a forwarding app on your phone. This page asks that helper for new messages every 8 seconds, masks them, and — only if you have an API key — sends them to Anthropic to categorize.</p>
+    <p class="key-note"><b>Where messages travel:</b> bank SMS → forwarding app on your phone → <code>expense-server.py</code> on your own PC → this page → Anthropic (only when categorizing).</p>
+    <p class="key-note"><b>What is stored:</b> the helper keeps the newest 500 messages, unencrypted, in <code>%TEMP%\expense-tracker-inbox.json</code>. This browser stores only the last-read id. The app never stores the raw SMS in your transaction list.</p>
+    <p class="key-note"><b>Third parties:</b> none beyond Anthropic. The helper is your own PC. Your forwarding app may use its own cloud service — check its privacy policy.</p>
+
+    <div class="warning-note">
+      The helper has no password and listens on your Wi-Fi network. Anyone on the same network who can reach port 8000
+      could read or post messages while it runs. Use trusted Wi-Fi only, and stop the helper when you are done.
+    </div>
+
+    <p id="autoModalMessage" class="key-message" role="status" aria-live="polite"></p>
+    <div class="review-foot">
+      <button id="autoCancelBtn" class="btn ghost" type="button">Cancel</button>
+      <button id="autoEnableBtn" class="btn primary" type="button">Turn on auto-import</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ RESTORE CONFIRMATION ============ -->
+<div id="restoreModal" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="restoreTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="restoreTitle">Restore backup</h2>
+        <p class="hint">Choose how to bring this file into your tracker.</p>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+    </div>
+    <p id="restoreSummary" class="key-note"></p>
+    <div class="warning-note">Merge keeps everything currently here and skips exact duplicates. Replace deletes your current list first.</div>
+    <p id="restoreMessage" class="key-message" role="status" aria-live="polite"></p>
+    <div class="review-foot">
+      <button id="restoreCancelBtn" class="btn ghost" type="button">Cancel</button>
+      <button id="restoreReplaceBtn" class="btn danger" type="button">Replace everything</button>
+      <button id="restoreMergeBtn" class="btn primary" type="button">Merge</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP LOCK SETTINGS ============ -->
+<div id="lockPanel" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="lockTitle">App lock</h2>
+        <p class="hint">Optional PIN. Stored transactions are encrypted with AES-GCM.</p>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">✕</button>
+    </div>
+
+    <div id="lockSetupBox">
+      <p class="key-note">Choose a PIN of 4–12 digits. The app will ask for it each time it opens. Encryption happens in your browser; the PIN is never stored.</p>
+      <div class="field">
+        <label for="lockPin">New PIN</label>
+        <input id="lockPin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="12" />
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label for="lockPin2">Repeat PIN</label>
+        <input id="lockPin2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="12" />
+      </div>
+      <p class="warning-note" style="margin-top:12px">If you forget this PIN, the data cannot be recovered unless you have a JSON backup. Backups are not encrypted.</p>
+      <p id="lockMessage" class="key-message" role="status" aria-live="polite"></p>
+      <button id="lockEnableBtn" class="btn primary full" type="button">Turn on app lock</button>
+    </div>
+
+    <div id="lockManageBox" hidden>
+      <p class="key-note">App lock is on. Your transactions are encrypted at rest and the app asks for your PIN when it opens.</p>
+      <button id="lockNowBtn" class="btn primary full" type="button">Lock now</button>
+      <div class="chart-divider"></div>
+      <p class="key-note">Turn off lock? The data stays, but it will no longer be encrypted.</p>
+      <div class="field">
+        <label for="lockOffPin">Current PIN</label>
+        <input id="lockOffPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" />
+      </div>
+      <p id="lockOffMessage" class="key-message" role="status" aria-live="polite"></p>
+      <button id="lockDisableBtn" class="btn ghost full" type="button">Turn off app lock</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FULL-SCREEN LOCK ============ -->
+<div id="lockScreen" class="lock-screen" hidden>
+  <div class="lock-card" role="dialog" aria-modal="true" aria-labelledby="lockScreenTitle">
+    <div class="lock-icon" aria-hidden="true">🔒</div>
+    <h2 id="lockScreenTitle">Expenses Tracker is locked</h2>
+    <p class="hint">Enter your PIN to decrypt your data on this device.</p>
+    <input id="unlockPin" class="pin-input" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" aria-label="PIN" />
+    <button id="unlockBtn" class="btn primary full" type="button">Unlock</button>
+    <p id="unlockMessage" class="lock-msg error" role="alert"></p>
+    <p class="small-muted" style="margin-top:12px">Forgot the PIN? The data cannot be decrypted without it. You can restore a JSON backup instead — that replaces the locked data and turns app lock off.</p>
+    <button id="lockRestoreBtn" class="btn ghost full" type="button">Restore a backup instead…</button>
+    <input id="lockRestoreInput" type="file" accept="application/json,.json" hidden />
   </div>
 </div>
 
@@ -1208,6 +1660,24 @@ const STORAGE_KEY = "ai-expense-tracker-v1";
 // It is never part of the HTML file, so sharing the file shares no secret.
 const KEY_STORAGE = "ai-expense-tracker-api-key";
 
+// Optional session-only copy of the key (cleared when the tab closes).
+const KEY_SESSION = "ai-expense-tracker-api-key-session";
+
+// Learned category corrections: { "swiggy": "Food", ... }.
+const RULES_STORAGE = "ai-expense-tracker-category-rules";
+
+// Backup bookkeeping (never contains the key or PIN).
+const LAST_BACKUP_KEY = "ai-expense-tracker-last-backup";
+const BACKUP_DISMISS_KEY = "ai-expense-tracker-backup-dismiss";
+const BACKUP_FORMAT = "expenses-tracker-backup";
+const BACKUP_VERSION = 1;
+const MAX_BACKUP_BYTES = 5 * 1024 * 1024;
+const MAX_TRANSACTIONS = 20000;
+
+// Encrypted payload marker stored inside STORAGE_KEY.
+const VAULT_FORMAT = "aes-gcm-v1";
+const PBKDF2_ITERATIONS = 210000;
+
 
 /* =========================================================
    2. STATE & LOCAL STORAGE
@@ -1215,7 +1685,8 @@ const KEY_STORAGE = "ai-expense-tracker-api-key";
 
 // Each transaction looks like:
 // { id, date: "2026-11-03", merchant: "SWIGGY", amount: 450, type: "debit", category: "Food" }
-let transactions = loadTransactions();
+// When app lock is on this array is only filled after the PIN decrypts it.
+let transactions = [];
 
 // Which month is shown. "all" means every month. "" = auto-pick on first load.
 let selectedMonth = "";
@@ -1230,11 +1701,38 @@ let editingId = null;
 // transaction keeps the "photo" badge.
 let pendingPhoto = false;
 
+// App-lock state. `vaultKey` is a CryptoKey held only in memory.
+let lockMeta = null;       // { salt, iterations } when a lock exists
+let vaultKey = null;       // set after unlock / after enabling the lock
+let saveChain = Promise.resolve();
+
+// Review screen draft rows.
+let reviewItems = [];
+let reviewOptions = {};
+
+// A parsed backup waiting for the Merge / Replace choice.
+let pendingRestore = null;
+
+// Auto-import is opt-in for every visit; it is never restored as "on".
+let autoEnabled = false;
+
 function loadTransactions() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    const list = saved ? JSON.parse(saved) : [];
-    return Array.isArray(list) ? list.filter(function (t) { return t && t.id; }) : [];
+    if (!saved) return [];
+
+    const list = JSON.parse(saved);
+
+    // Encrypted payloads are handled by the async unlock screen.
+    if (list && typeof list === "object" && !Array.isArray(list) && list.enc === VAULT_FORMAT) {
+      return [];
+    }
+
+    if (!Array.isArray(list)) return [];
+    return list
+      .slice(0, MAX_TRANSACTIONS)
+      .map(function (t) { return sanitizeTransaction(t, { keepId: true, applyRules: false }); })
+      .filter(Boolean);
   } catch (err) {
     console.warn("Could not read saved data:", err);
     return [];
@@ -1242,8 +1740,22 @@ function loadTransactions() {
 }
 
 function saveTransactions() {
+  const snapshot = transactions.slice();
+
+  // With app lock on, encrypt before writing. Saves are queued so two
+  // quick edits can't overwrite each other.
+  if (lockMeta && vaultKey) {
+    saveChain = saveChain
+      .then(function () { return encryptTransactions(snapshot, vaultKey, lockMeta); })
+      .catch(function (err) { console.warn("Could not save encrypted data:", err); });
+    return;
+  }
+
+  // Locked but not unlocked: never overwrite the encrypted blob.
+  if (lockMeta && !vaultKey) return;
+
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
   } catch (err) {
     console.warn("Could not save data:", err);
   }
@@ -1322,6 +1834,162 @@ function escapeHtml(text) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
   });
 }
+
+// IDs are used inside HTML attributes, so keep them boring and safe.
+function safeId(value) {
+  return typeof value === "string" && /^[a-z0-9]{4,40}$/i.test(value) ? value : uid();
+}
+
+/* ---------------------------------------------------------
+   CATEGORY MEMORY
+   When you correct a merchant's category, remember it so the
+   next paste is already right. Stored separately from the key.
+   --------------------------------------------------------- */
+
+function merchantKey(name) {
+  return String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+// Rules are read from localStorage once and then kept in memory, so
+// sanitizing a 20,000-row backup does not parse storage 20,000 times.
+let categoryRulesCache = null;
+
+function sanitizeRules(raw) {
+  const clean = {};
+  if (!raw || typeof raw !== "object") return clean;
+  Object.keys(raw).slice(0, 500).forEach(function (key) {
+    const name = merchantKey(key).slice(0, 60);
+    const category = normalizeCategory(raw[key]);
+    if (!name) return;
+    // Never let a backup file pollute object prototypes.
+    if (name === "__proto__" || name === "constructor" || name === "prototype") return;
+    if (CATEGORIES.indexOf(category) !== -1) clean[name] = category;
+  });
+  return clean;
+}
+
+function loadRules() {
+  if (categoryRulesCache) return categoryRulesCache;
+  try {
+    categoryRulesCache = sanitizeRules(JSON.parse(localStorage.getItem(RULES_STORAGE) || "{}"));
+  } catch (err) {
+    categoryRulesCache = {};
+  }
+  return categoryRulesCache;
+}
+
+function saveRules(rules) {
+  categoryRulesCache = sanitizeRules(rules);
+  try {
+    localStorage.setItem(RULES_STORAGE, JSON.stringify(categoryRulesCache));
+  } catch (err) { /* storage blocked — rules stay in memory for this visit */ }
+}
+
+function applyCategoryRule(merchant) {
+  const key = merchantKey(merchant);
+  if (!key) return null;
+  const rules = loadRules();
+  return rules[key] || null;
+}
+
+function learnCategory(merchant, category) {
+  if (CATEGORIES.indexOf(category) === -1) return;
+  const key = merchantKey(merchant);
+  if (!key || key.length < 2) return;
+
+  const rules = loadRules();
+  if (rules[key] === category) return;
+
+  rules[key] = category;
+  const keys = Object.keys(rules);
+  if (keys.length > 500) delete rules[keys[0]];
+  saveRules(rules);
+}
+
+/* ---------------------------------------------------------
+   VALIDATION
+   Everything from the AI, a backup file or localStorage goes
+   through this before it reaches the screen.
+   --------------------------------------------------------- */
+
+function sanitizeTransaction(raw, options) {
+  options = options || {};
+  if (!raw || typeof raw !== "object") return null;
+
+  const amountNumber = Number(raw.amount);
+  if (!isFinite(amountNumber) || amountNumber <= 0) return null;
+
+  // Keep money sane: at most one crore, two decimal places.
+  const amount = Math.round(Math.min(Math.abs(amountNumber), 10000000) * 100) / 100;
+  if (!amount) return null;
+
+  let date = normalizeDate(raw.date);
+  const year = Number(String(date).slice(0, 4));
+
+  // normalizeDate falls back to today for junk; still reject odd years.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || year < 2000 || year > 2100) {
+    date = todayISO();
+  }
+
+  const merchant = String(raw.merchant == null ? "" : raw.merchant)
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60) || "Unknown";
+
+  // Saved rows keep their own category. Only fresh AI/backup entries
+  // (options.applyRules !== false) get the learned merchant rule.
+  const learned = options.applyRules === false ? null : applyCategoryRule(merchant);
+
+  const transaction = {
+    id: options.keepId ? safeId(raw.id) : uid(),
+    date: date,
+    merchant: merchant,
+    amount: amount,
+    type: normalizeType(raw.type),
+    category: learned || normalizeCategory(raw.category)
+  };
+
+  if (raw.auto === true) transaction.auto = true;
+  if (raw.photo === true) transaction.photo = true;
+  return transaction;
+}
+
+/* ---------------------------------------------------------
+   PRIVACY MASKING
+   Runs on this device before any text is sent to Claude.
+   --------------------------------------------------------- */
+
+function maskSensitive(text) {
+  let out = String(text == null ? "" : text);
+
+  // Emails first, because they also contain "@".
+  out = out.replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[email]");
+
+  // UPI IDs such as name@okhdfcbank (no dot, so emails are already gone).
+  out = out.replace(/\b[A-Z0-9._-]{2,}@[A-Z]{2,}\b/gi, "[upi]");
+
+  // Indian mobile numbers, with or without +91.
+  out = out.replace(/(^|[^\d])(?:\+?91[\s-]?)?([6-9]\d{4}[\s-]?\d{5})(?!\d)/g, "$1[phone]");
+
+  // Long digit runs = account / card / Aadhaar-style numbers.
+  // Keep only the last four digits, as requested.
+  out = out.replace(/(^|[^\d])((?:\d[ -]?){8,18}\d)(?!\d)/g, function (match, prefix, group) {
+    const digits = group.replace(/\D/g, "");
+    if (digits.length < 9 || digits.length > 19) return match;
+    return prefix + "••••" + digits.slice(-4);
+  });
+
+  return out;
+}
+
+function getSmsLines() {
+  return $("smsInput").value
+    .split(/\r?\n/)
+    .map(function (line) { return line.trim(); })
+    .filter(Boolean);
+}
+
 /* =========================================================
    4. CLEANING UP WHAT THE AI RETURNS
    ========================================================= */
@@ -1376,26 +2044,42 @@ function normalizeCategory(value) {
 
 // Turn one raw AI object into a safe transaction (or null if it's unusable).
 function buildTransaction(raw) {
-  if (!raw || typeof raw !== "object") return null;
-
-  const amount = Math.round(Math.abs(Number(raw.amount)) * 100) / 100;
-  if (!amount || !isFinite(amount)) return null;
-
-  const merchant = String(raw.merchant || "Unknown").trim().slice(0, 60) || "Unknown";
-
-  return {
-    id: uid(),
-    date: normalizeDate(raw.date),
-    merchant: merchant,
-    amount: amount,
-    type: normalizeType(raw.type),
-    category: normalizeCategory(raw.category)
-  };
+  return sanitizeTransaction(raw, {});
 }
 
 // Used to avoid adding the exact same transaction twice.
 function transactionKey(t) {
-  return t.date + "|" + t.merchant.toLowerCase() + "|" + Number(t.amount).toFixed(2) + "|" + t.type;
+  return String(t.date) + "|" + String(t.merchant).toLowerCase() + "|" +
+    Number(t.amount).toFixed(2) + "|" + String(t.type);
+}
+
+// "exact" = same merchant/date/amount/type.
+// "fuzzy" = same type, amount within 1%, date within a day, similar merchant.
+function duplicateKind(candidate, list) {
+  const key = transactionKey(candidate);
+  if (list.some(function (t) { return transactionKey(t) === key; })) return "exact";
+
+  const candidateTime = Date.parse(candidate.date + "T00:00:00");
+  if (!isFinite(candidateTime)) return null;
+
+  const a = merchantKey(candidate.merchant);
+  for (let i = 0; i < list.length; i++) {
+    const other = list[i];
+    if (other.type !== candidate.type) continue;
+
+    const otherTime = Date.parse(other.date + "T00:00:00");
+    if (!isFinite(otherTime) || Math.abs(candidateTime - otherTime) > 86400000) continue;
+
+    const amountDiff = Math.abs(Number(other.amount) - Number(candidate.amount));
+    if (amountDiff > Math.max(1, Number(candidate.amount) * 0.01)) continue;
+
+    const b = merchantKey(other.merchant);
+    if (!a || !b) continue;
+    if (a === b || a.indexOf(b) !== -1 || b.indexOf(a) !== -1) return "fuzzy";
+    if (a.slice(0, 4) === b.slice(0, 4)) return "fuzzy";
+  }
+
+  return null;
 }
 
 
@@ -1445,7 +2129,7 @@ function renderMonthOptions() {
   const select = $("monthSelect");
   let html = '<option value="all">All time</option>';
   months.forEach(function (month) {
-    html += '<option value="' + month + '">' + monthLabel(month) + "</option>";
+    html += '<option value="' + escapeHtml(month) + '">' + escapeHtml(monthLabel(month)) + "</option>";
   });
   select.innerHTML = html;
   select.value = selectedMonth;
@@ -1541,7 +2225,7 @@ function renderMiniBars() {
     const height = Math.max(6, (values[i] / max) * 100);
     const cls = month === selectedMonth ? "mini-bar current" : "mini-bar";
     return '<span class="' + cls + '" style="height:' + height.toFixed(1) + '%" title="' +
-      monthLabel(month) + ": " + inr(values[i]) + '"></span>';
+      escapeHtml(monthLabel(month)) + ": " + escapeHtml(inr(values[i])) + '"></span>';
   }).join("");
 }
 
@@ -1678,6 +2362,8 @@ function rowHTML(t) {
   const color = CATEGORY_COLORS[t.category] || "#8c8e9b";
   const letter = escapeHtml((String(t.merchant).charAt(0) || "?").toUpperCase());
   const sign = t.type === "credit" ? "+" : "−";
+  const typeSafe = t.type === "credit" ? "credit" : "debit";
+  const idSafe = escapeHtml(t.id);
 
   const options = CATEGORIES.map(function (c) {
     return '<option' + (c === t.category ? " selected" : "") + ">" + escapeHtml(c) + "</option>";
@@ -1689,14 +2375,14 @@ function rowHTML(t) {
       '<span class="tx-text"><b>' + escapeHtml(t.merchant) + "</b>" +
       "<small>" + escapeHtml(t.category) + "</small></span>" +
     "</div></td>" +
-    '<td data-label="Type"><span class="tag ' + t.type + '">' + t.type + "</span>" +
+    '<td data-label="Type"><span class="tag ' + typeSafe + '">' + typeSafe + "</span>" +
       (t.auto ? ' <span class="tag auto" title="Added automatically from SMS">auto</span>' : "") +
       (t.photo ? ' <span class="tag photo" title="Scanned from a bill photo">photo</span>' : "") + "</td>" +
-    '<td data-label="Amount" class="amount ' + t.type + '">' + sign + inr(t.amount) + "</td>" +
-    '<td data-label="Date">' + prettyDate(t.date) + "</td>" +
-    '<td data-label="Category"><select class="cat-select" data-id="' + t.id + '" aria-label="Change category">' +
+    '<td data-label="Amount" class="amount ' + typeSafe + '">' + sign + inr(t.amount) + "</td>" +
+    '<td data-label="Date">' + escapeHtml(prettyDate(t.date)) + "</td>" +
+    '<td data-label="Category"><select class="cat-select" data-id="' + idSafe + '" aria-label="Change category">' +
       options + "</select></td>" +
-    '<td class="actions"><button class="icon-btn danger" type="button" data-del="' + t.id + '" ' +
+    '<td class="actions"><button class="icon-btn danger" type="button" data-del="' + idSafe + '" ' +
       'title="Delete" aria-label="Delete this transaction">✕</button></td>' +
     "</tr>";
 }
@@ -1740,18 +2426,20 @@ function renderRecent() {
     const color = CATEGORY_COLORS[t.category] || "#8c8e9b";
     const letter = escapeHtml((String(t.merchant).charAt(0) || "?").toUpperCase());
     const sign = t.type === "credit" ? "+" : "−";
-    const amountClass = t.type === "credit" ? "amount credit" : "amount debit";
+    const typeSafe = t.type === "credit" ? "credit" : "debit";
+    const idSafe = escapeHtml(t.id);
+    const amountClass = typeSafe === "credit" ? "amount credit" : "amount debit";
 
     return '<div class="recent-item">' +
       '<span class="recent-icon" style="background:' + color + '26;color:' + color + '">' + letter + "</span>" +
       '<div class="recent-main"><b>' + escapeHtml(t.merchant) + "</b>" +
-      "<small>" + escapeHtml(t.category) + " · " + prettyDate(t.date) + "</small></div>" +
+      "<small>" + escapeHtml(t.category) + " · " + escapeHtml(prettyDate(t.date)) + "</small></div>" +
       '<div class="recent-right"><b class="' + amountClass + '">' + sign + inr(t.amount) + "</b>" +
-      "<small>" + t.type + (t.auto ? " · auto" : "") + (t.photo ? " · photo" : "") + "</small></div>" +
+      "<small>" + typeSafe + (t.auto ? " · auto" : "") + (t.photo ? " · photo" : "") + "</small></div>" +
       '<div class="recent-actions">' +
-        '<button class="recent-btn" type="button" data-edit="' + t.id + '" ' +
+        '<button class="recent-btn" type="button" data-edit="' + idSafe + '" ' +
         'title="Edit" aria-label="Edit this transaction">✎</button>' +
-        '<button class="recent-btn danger" type="button" data-del="' + t.id + '" ' +
+        '<button class="recent-btn danger" type="button" data-del="' + idSafe + '" ' +
         'title="Delete" aria-label="Delete this transaction">✕</button>' +
       "</div>" +
       "</div>";
@@ -1767,6 +2455,10 @@ function renderAll() {
   renderChart();
   renderTable();
   renderRecent();
+
+  // Keep the Data safety card and the 14-day backup reminder in sync.
+  updateDataSafety();
+  updateBackupBanner();
 }
 /* =========================================================
    6. MODALS (dialogs)
@@ -1787,6 +2479,14 @@ function closeModal(id) {
     if (listening && dictationTarget === "merchant") stopDictation(true);
     editingId = null;
     pendingPhoto = false;
+  }
+
+  // Cancelled review / restore / auto-import opt-in leaves nothing behind.
+  if (id === "reviewModal") reviewItems = [];
+  if (id === "restoreModal") pendingRestore = null;
+  if (id === "autoModal") {
+    $("autoToggle").checked = autoEnabled;
+    $("autoModalMessage").textContent = "";
   }
 
   if (!document.querySelector(".modal:not([hidden])")) {
@@ -1818,13 +2518,25 @@ function setStatus(message) {
    API key: each person saves their own in this browser
    --------------------------------------------------------- */
 
-// Read the key saved on this device. Returns "" if there isn't one.
+// Read the key saved on this device (permanent first, then session).
 function getApiKey() {
   try {
-    return String(localStorage.getItem(KEY_STORAGE) || "").trim();
+    return String(
+      localStorage.getItem(KEY_STORAGE) ||
+      sessionStorage.getItem(KEY_SESSION) ||
+      ""
+    ).trim();
   } catch (err) {
     return "";
   }
+}
+
+function getKeyLocation() {
+  try {
+    if (localStorage.getItem(KEY_STORAGE)) return "local";
+    if (sessionStorage.getItem(KEY_SESSION)) return "session";
+  } catch (err) { /* storage blocked */ }
+  return "none";
 }
 
 function setKeyMessage(message, isError) {
@@ -1835,12 +2547,16 @@ function setKeyMessage(message, isError) {
 
 // Keep the dots + labels in sync with whether a key exists.
 function updateKeyUI() {
-  const hasKey = Boolean(getApiKey());
+  const location = getKeyLocation();
+  const hasKey = location !== "none";
 
   $("keyDot").classList.toggle("on", hasKey);
   $("keyBtnDot").classList.toggle("on", hasKey);
-  $("keyState").textContent = hasKey ? "Saved in this browser" : "Not added";
+  $("keyState").textContent = location === "local"
+    ? "Saved in this browser"
+    : (location === "session" ? "Kept for this session only" : "Not added");
   $("forgetKeyBtn").hidden = !hasKey;
+  $("rememberKey").checked = location !== "session";
   $("keyBtn").title = hasKey ? "Your API key is saved — click to change it" : "Add your own Claude API key";
   $("keyBtn2").title = hasKey ? "Your API key is saved — click to change it" : "Add your own Claude API key";
 }
@@ -1854,30 +2570,54 @@ function saveApiKey() {
     return;
   }
 
+  // Catch obvious typos early. Anthropic keys start with sk-ant-.
+  if (!/^sk-ant-/.test(key) || key.length < 20) {
+    setKeyMessage("That doesn't look like an Anthropic key. It usually starts with sk-ant-.", true);
+    return;
+  }
+
+  const remember = $("rememberKey").checked;
+
   try {
-    localStorage.setItem(KEY_STORAGE, key);
+    localStorage.removeItem(KEY_STORAGE);
+    sessionStorage.removeItem(KEY_SESSION);
+
+    if (remember) {
+      localStorage.setItem(KEY_STORAGE, key);
+    } else {
+      sessionStorage.setItem(KEY_SESSION, key);
+    }
   } catch (err) {
-    setKeyMessage("This browser blocked local storage, so the key can't be saved.", true);
+    setKeyMessage("This browser blocked storage, so the key can't be saved.", true);
     return;
   }
 
   updateKeyUI();
-  setKeyMessage("Key saved. It will be remembered in this browser.");
+  setKeyMessage(remember
+    ? "Key saved in this browser. It will be remembered after you close it."
+    : "Key kept for this session only. Closing the tab forgets it.");
   setStatus("API key saved. You can categorize now.");
 }
 
 function forgetApiKey() {
   try {
     localStorage.removeItem(KEY_STORAGE);
+    sessionStorage.removeItem(KEY_SESSION);
   } catch (err) { /* nothing else we can do */ }
 
   $("apiKeyInput").value = "";
   updateKeyUI();
-  setKeyMessage("Key removed from this browser.");
+  setKeyMessage("Key removed from this browser and this session.");
   setStatus("API key removed.");
 }
 
 function openKeyPanel() {
+  const location = getKeyLocation();
+
+  // Never pre-fill the saved secret. The user can paste a new key.
+  $("apiKeyInput").value = "";
+  $("rememberKey").checked = location !== "session";
+
   openModal("keyPanel");
   setTimeout(function () {
     $("apiKeyInput").focus({ preventScroll: true });
@@ -2009,6 +2749,10 @@ async function requestClaudeJSON(content, systemPrompt, maxTokens) {
 async function requestCategorization(lines) {
   const today = todayISO();
 
+  // Mask emails, phone numbers, UPI IDs and long account/card numbers
+  // on this device BEFORE building the request.
+  const safeLines = lines.map(maskSensitive);
+
   // Instructions for the model. We ask for JSON only so we can parse it.
   const systemPrompt =
     "You are a precise data-extraction engine for Indian bank SMS alerts and receipts. " +
@@ -2026,10 +2770,10 @@ async function requestCategorization(lines) {
     "- Skip anything that is not a transaction: OTPs, ads, offers, balance enquiries, failed payments, reminders.\n" +
     '- If there are no transactions, return {"transactions":[]}.\n\n' +
     "Messages (one per line):\n" +
-    lines.map(function (line, i) { return (i + 1) + ". " + line; }).join("\n");
+    safeLines.map(function (line, i) { return (i + 1) + ". " + line; }).join("\n");
 
   const parsed = await requestClaudeJSON(userPrompt, systemPrompt, 4096);
-  const list = Array.isArray(parsed) ? parsed : parsed.transactions;
+  const list = Array.isArray(parsed) ? parsed : parsed && parsed.transactions;
 
   if (!Array.isArray(list)) {
     const error = new Error("The AI reply was missing the transactions list. Please try again.");
@@ -2037,7 +2781,11 @@ async function requestCategorization(lines) {
     throw error;
   }
 
-  return list;
+  // Cap the batch and keep only objects. Every field is validated again
+  // by sanitizeTransaction before it reaches the screen or storage.
+  return list
+    .slice(0, 200)
+    .filter(function (item) { return item && typeof item === "object"; });
 }
 
 // Photo → one transaction. Claude reads the bill image directly.
@@ -2115,6 +2863,225 @@ function storeParsedTransactions(list, options) {
   return { added: added.length, skipped: skipped };
 }
 
+/* =========================================================
+   REVIEW SCREEN
+   Nothing from the AI is saved until you confirm these rows.
+   ========================================================= */
+
+function categoryOptions(selected) {
+  return CATEGORIES.map(function (category) {
+    return '<option' + (category === selected ? " selected" : "") + ">" +
+      escapeHtml(category) + "</option>";
+  }).join("");
+}
+
+function buildReviewItem(raw, options) {
+  if (!raw || typeof raw !== "object") return null;
+
+  const amount = Number(raw.amount);
+  if (!isFinite(amount) || amount <= 0) return null;
+
+  const rawDate = String(raw.date == null ? "" : raw.date).trim();
+  const merchant = String(raw.merchant == null ? "" : raw.merchant)
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60) || "Unknown";
+
+  const learned = applyCategoryRule(merchant);
+  const transaction = {
+    id: uid(),
+    date: normalizeDate(rawDate),
+    merchant: merchant,
+    amount: Math.round(Math.min(amount, 10000000) * 100) / 100,
+    type: normalizeType(raw.type),
+    category: learned || normalizeCategory(raw.category)
+  };
+
+  if (options.photo) transaction.photo = true;
+  if (options.auto) transaction.auto = true;
+
+  const issues = [];
+  if (!rawDate) issues.push("Missing date");
+  if (transaction.amount > 100000 || transaction.amount < 1) issues.push("Odd amount");
+  if (transaction.category === "Other") issues.push("Other category");
+
+  const duplicate = duplicateKind(transaction, transactions);
+  if (duplicate === "exact") issues.push("Duplicate");
+  if (duplicate === "fuzzy") issues.push("Possible duplicate");
+
+  return {
+    transaction: transaction,
+    originalCategory: transaction.category,
+    issues: issues,
+    duplicate: duplicate,
+    // Duplicates are unchecked by default so a second paste can't double-add.
+    checked: duplicate === null
+  };
+}
+
+function openReview(list, options) {
+  options = options || {};
+  reviewOptions = options;
+
+  const rawList = Array.isArray(list) ? list : [];
+  reviewItems = rawList.map(function (raw) {
+    return buildReviewItem(raw, options);
+  }).filter(Boolean);
+
+  // Also catch duplicates inside this same paste / bill batch.
+  const seen = transactions.slice();
+  reviewItems.forEach(function (item) {
+    if (item.duplicate) {
+      seen.push(item.transaction);
+      return;
+    }
+
+    const kind = duplicateKind(item.transaction, seen);
+    if (kind) {
+      item.duplicate = kind;
+      item.issues.push(kind === "exact" ? "Duplicate" : "Possible duplicate");
+      item.checked = false; // duplicates start unchecked
+    }
+    seen.push(item.transaction);
+  });
+
+  const skipped = rawList.length - reviewItems.length;
+  if (!reviewItems.length) {
+    setStatus("No usable transactions to review.");
+    return;
+  }
+
+  $("reviewTitle").textContent = options.source === "photo"
+    ? "Review scanned bill"
+    : "Review parsed transactions";
+  $("reviewHint").textContent = options.hint ||
+    "Uncheck anything you don't want. Yellow rows need a second look.";
+  renderReview();
+  openModal("reviewModal");
+
+  if (skipped) {
+    $("reviewSummary").textContent = skipped + " unreadable item" +
+      (skipped === 1 ? "" : "s") + " skipped. " + $("reviewSummary").textContent;
+  }
+
+  setTimeout(function () {
+    const first = document.querySelector("#reviewList input[type=checkbox]");
+    if (first) first.focus({ preventScroll: true });
+  }, 60);
+}
+
+function updateReviewSummary() {
+  const selected = reviewItems.filter(function (item) { return item.checked; }).length;
+  $("reviewSummary").textContent =
+    reviewItems.length + " transaction" + (reviewItems.length === 1 ? "" : "s") +
+    " · " + selected + " selected. Duplicates start unchecked.";
+}
+
+function renderReview() {
+  $("reviewList").innerHTML = reviewItems.map(function (item, i) {
+    const t = item.transaction;
+    const needs = item.issues.length > 0;
+
+    return '<div class="review-item' + (needs ? " needs" : "") + '" data-row="' + i + '">' +
+      '<div class="review-top">' +
+        '<label><input type="checkbox" data-check="' + i + '"' + (item.checked ? " checked" : "") + " /> " +
+          "<span>" + escapeHtml(t.merchant) + "</span></label>" +
+        (needs
+          ? '<span class="tag review">Needs review</span><span class="review-note">' +
+            escapeHtml(item.issues.join(" · ")) + "</span>"
+          : '<span class="small-muted">Looks good</span>') +
+      "</div>" +
+      '<div class="review-grid">' +
+        '<div class="field"><label>Date</label><input type="date" data-field="date" data-i="' +
+          i + '" value="' + escapeHtml(t.date) + '" /></div>' +
+        '<div class="field"><label>Amount (₹)</label><input type="number" min="0.01" step="0.01" data-field="amount" data-i="' +
+          i + '" value="' + escapeHtml(t.amount.toFixed(2)) + '" /></div>' +
+        '<div class="field"><label>Merchant</label><input type="text" maxlength="60" data-field="merchant" data-i="' +
+          i + '" value="' + escapeHtml(t.merchant) + '" /></div>' +
+        '<div class="field"><label>Type</label><select data-field="type" data-i="' + i + '">' +
+          '<option value="debit"' + (t.type === "debit" ? " selected" : "") + ">Debit</option>" +
+          '<option value="credit"' + (t.type === "credit" ? " selected" : "") + ">Credit</option>" +
+        "</select></div>" +
+        '<div class="field"><label>Category</label><select data-field="category" data-i="' + i + '">' +
+          categoryOptions(t.category) +
+        "</select></div>" +
+      "</div>" +
+    "</div>";
+  }).join("");
+
+  updateReviewSummary();
+}
+
+function updateReviewField(event) {
+  const target = event.target;
+  const field = target.getAttribute("data-field");
+  if (!field) return;
+
+  const index = Number(target.getAttribute("data-i"));
+  const item = reviewItems[index];
+  if (!item) return;
+
+  if (field === "amount") {
+    const value = Number(target.value);
+    if (isFinite(value) && value > 0) item.transaction.amount = Math.round(Math.min(value, 10000000) * 100) / 100;
+  } else if (field === "merchant") {
+    item.transaction.merchant = target.value.trim().slice(0, 60) || "Unknown";
+  } else if (field === "date") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(target.value)) item.transaction.date = target.value;
+  } else if (field === "type") {
+    item.transaction.type = target.value === "credit" ? "credit" : "debit";
+  } else if (field === "category") {
+    item.transaction.category = CATEGORIES.indexOf(target.value) !== -1 ? target.value : "Other";
+  }
+}
+
+function saveReview() {
+  const selected = reviewItems.filter(function (item) { return item.checked; });
+
+  if (!selected.length) {
+    $("reviewSummary").textContent = "Nothing selected. Tick at least one row first.";
+    return;
+  }
+
+  // Remember category corrections for next time.
+  selected.forEach(function (item) {
+    if (item.transaction.category !== item.originalCategory) {
+      learnCategory(item.transaction.merchant, item.transaction.category);
+    }
+  });
+
+  const raw = selected.map(function (item) {
+    const t = item.transaction;
+    return {
+      date: t.date,
+      merchant: t.merchant,
+      amount: t.amount,
+      type: t.type,
+      category: t.category
+    };
+  });
+
+  const result = storeParsedTransactions(raw, {
+    auto: Boolean(reviewOptions.auto),
+    photo: Boolean(reviewOptions.photo)
+  });
+
+  closeModal("reviewModal");
+  reviewItems = [];
+
+  if (reviewOptions.clearSms) $("smsInput").value = "";
+  if (reviewOptions.resetBillOnSave) {
+    resetBill();
+    setScanStatus("Bill saved.", "on");
+  }
+
+  setStatus("Added " + result.added + " transaction" + (result.added === 1 ? "" : "s") +
+    (result.skipped ? " · skipped " + result.skipped + " duplicate/invalid" : "") + ".");
+  updateDataSafety();
+  updateBackupBanner();
+}
+
 async function handleCategorize() {
   hideError();
   setStatus("");
@@ -2144,15 +3111,15 @@ async function handleCategorize() {
 
   try {
     const list = await requestCategorization(lines);
-    const result = storeParsedTransactions(list);
 
-    if (result.added) {
-      $("smsInput").value = "";
-      setStatus("Added " + result.added + " transaction" + (result.added === 1 ? "" : "s") +
-        (result.skipped ? " · skipped " + result.skipped : "") + ".");
-    } else {
-      setStatus("No new transactions found — those look like OTPs, ads or duplicates.");
+    if (!list.length) {
+      setStatus("No transactions found — those look like OTPs, ads or balance alerts.");
+      return;
     }
+
+    // Never save straight from the AI: show an editable review first.
+    openReview(list, { source: "sms", clearSms: true });
+    setStatus("Review " + list.length + " transaction" + (list.length === 1 ? "" : "s") + " before saving.");
   } catch (err) {
     console.error(err);
     showError(err.message || "Something went wrong. Please try again.");
@@ -2503,9 +3470,15 @@ async function scanBillOnDevice() {
       return;
     }
 
-    prefillAddTransaction(parsed, "Read on this device — check the amount and shop, then add.");
-    setScanStatus("Found " + inr(parsed.amount) + " — confirm the details.", "on");
-    setStatus("Bill read on your device. Check the details, then click “Add transaction”.");
+    // On-device OCR is best-effort, so always show the review screen.
+    openReview([parsed], {
+      source: "photo",
+      photo: true,
+      resetBillOnSave: true,
+      hint: "Read on this device — may be less accurate. Check every field before adding."
+    });
+    setScanStatus("Found " + inr(parsed.amount) + " — review and edit before saving.", "on");
+    setStatus("Bill read on your device. Check every field, then add.");
   } catch (err) {
     console.error(err);
     setScanStatus("On-device reading failed.", "error");
@@ -2564,15 +3537,15 @@ async function scanBill() {
       return;
     }
 
-    const result = storeParsedTransactions([transaction], { photo: true });
-
-    if (result.added) {
-      resetBill();
-      setScanStatus("Added to transactions.", "on");
-      setStatus("Bill scanned and added. Check the amount and category, then edit if needed.");
-    } else {
-      setScanStatus("That bill is already in your list.", "warn");
-    }
+    // Show the Claude result (photo stays attached until saved/cancelled).
+    openReview([transaction], {
+      source: "photo",
+      photo: true,
+      resetBillOnSave: true,
+      hint: "Claude read this bill. Check the amount, date and shop before adding."
+    });
+    setScanStatus("Review the scanned bill before saving.", "on");
+    setStatus("Bill scanned. Check the details, then add selected.");
   } catch (err) {
     console.error(err);
     setScanStatus("Scan failed — please try again.", "error");
@@ -2647,7 +3620,7 @@ const MIC_TARGETS = {
     label: "micLabel",
     status: "micStatus",
     idleLabel: "Dictate",
-    idleStatus: "Speak a bank message — it types itself. No API key needed.",
+    idleStatus: "Speak a bank message — it types itself. Chrome may send audio to Google.",
     listeningStatus: "Listening — speak now.",
     stoppedStatus: "Stopped. Tap Dictate to speak again."
   },
@@ -2658,7 +3631,7 @@ const MIC_TARGETS = {
     label: "merchantMicLabel",
     status: "merchantMicStatus",
     idleLabel: "Speak",
-    idleStatus: "Or tap 🎤 Speak and say the shop name — no API key needed.",
+    idleStatus: "Or tap 🎤 Speak and say the shop name. Chrome may send audio to Google.",
     listeningStatus: "Listening — say the shop name.",
     stoppedStatus: "Stopped. Tap Speak to say the name again."
   }
@@ -2862,22 +3835,21 @@ if (SpeechRecognition) {
     startDictation("merchant");
   });
 } else {
-  $("micBtn").disabled = true;
-  $("merchantMicBtn").disabled = true;
-  $("quickVoiceBtn").disabled = true;
+  // No speech recognition here: hide the Dictate buttons instead of
+  // leaving dead controls, and explain what to do instead.
+  $("micBtn").hidden = true;
+  $("merchantMicBtn").hidden = true;
+  $("quickVoiceBtn").hidden = true;
 
   if (!window.isSecureContext) {
-    $("micBtn").title = "Microphone needs an HTTPS page";
-    $("merchantMicBtn").title = "Microphone needs an HTTPS page";
-    $("quickVoiceBtn").title = "Microphone needs an HTTPS page";
-    setMicStatus("Microphone needs a secure page. On your phone use the HTTPS link (GitHub Pages), or localhost on this PC.", "warn", "sms");
-    setMicStatus("Microphone needs a secure page — type the name instead.", "warn", "merchant");
+    setMicStatus("Dictation needs a secure HTTPS page. Type or paste the message instead.", "warn", "sms");
+    setMicStatus("Dictation needs HTTPS — type the shop name instead.", "warn", "merchant");
   } else {
-    $("micBtn").title = "Dictation needs Chrome, Edge or Safari";
-    $("merchantMicBtn").title = "Dictation needs Chrome, Edge or Safari";
-    $("quickVoiceBtn").title = "Dictation needs Chrome, Edge or Safari";
-    setMicStatus("This browser can't dictate. Use Chrome, Edge or Safari.", "warn", "sms");
-    setMicStatus("This browser can't dictate — type the name instead.", "warn", "merchant");
+    setMicStatus(
+      "This browser can't dictate. Use Chrome, Edge or Safari. When dictation is available, Chrome may send audio to Google.",
+      "warn", "sms"
+    );
+    setMicStatus("This browser can't dictate — type the shop name instead.", "warn", "merchant");
   }
 }
 
@@ -2909,21 +3881,20 @@ const RELAY_BASE = location.protocol === "file:"
 let autoTimer = null;
 let autoBusy = false;
 
+// Only the last-read message id is remembered. Auto-import itself is
+// NEVER restored as "on" — the user must opt in again every visit.
 function getAutoSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem(AUTO_STORAGE) || "{}");
-    return {
-      enabled: Boolean(saved.enabled),
-      lastId: Number(saved.lastId) || 0
-    };
+    return { lastId: Number(saved.lastId) || 0 };
   } catch (err) {
-    return { enabled: false, lastId: 0 };
+    return { lastId: 0 };
   }
 }
 
 function saveAutoSettings(settings) {
   try {
-    localStorage.setItem(AUTO_STORAGE, JSON.stringify(settings));
+    localStorage.setItem(AUTO_STORAGE, JSON.stringify({ lastId: Number(settings.lastId) || 0 }));
   } catch (err) { /* storage blocked — automation still works for this visit */ }
 }
 
@@ -2949,7 +3920,8 @@ async function checkAutoServer() {
 
 async function autoImportTick(manual) {
   if (autoBusy) return;
-  if (!getAutoSettings().enabled && !manual) return;
+  if (!RELAY_BASE) return;
+  if (!autoEnabled && !manual) return;
 
   autoBusy = true;
   if (manual) setAutoStatus("Checking…", "busy");
@@ -2981,7 +3953,7 @@ async function autoImportTick(manual) {
     // Move the bookmark only AFTER a successful read, so a failed AI
     // call is retried next time instead of losing the message.
     const highestId = Math.max.apply(null, messages.map(function (m) { return Number(m.id) || 0; }));
-    saveAutoSettings({ enabled: true, lastId: Math.max(settings.lastId, highestId) });
+    saveAutoSettings({ lastId: Math.max(settings.lastId, highestId) });
 
     if (result.added) {
       setAutoStatus("Auto-added " + result.added + " transaction" + (result.added === 1 ? "" : "s"), "on");
@@ -3017,30 +3989,89 @@ function stopAutoPolling() {
 }
 
 async function enableAutoImport(enabled) {
-  if (!RELAY_BASE) return;
-
-  saveAutoSettings({ enabled: enabled, lastId: getAutoSettings().lastId });
-  $("autoCheckBtn").hidden = !enabled;
-
-  if (!enabled) {
-    stopAutoPolling();
-    setAutoStatus("Off", "");
-    return;
+  if (!RELAY_BASE) {
+    autoEnabled = false;
+    $("autoToggle").checked = false;
+    setAutoStatus("Local only", "");
+    return false;
   }
 
-  const ok = await checkAutoServer();
-  if (!ok) {
-    // Put the switch back: there's nothing to listen to.
-    saveAutoSettings({ enabled: false, lastId: getAutoSettings().lastId });
+  if (!enabled) {
+    autoEnabled = false;
+    stopAutoPolling();
     $("autoToggle").checked = false;
     $("autoCheckBtn").hidden = true;
-    setAutoStatus("Relay offline", "error");
-    return;
+    $("autoHint").textContent = "Off by default · local helper only";
+    setAutoStatus("Off", "");
+    return false;
   }
 
   setAutoStatus("Connecting…", "busy");
+  $("autoToggle").checked = true;
+  $("autoCheckBtn").hidden = false;
+
+  const ok = await checkAutoServer();
+  if (!ok) {
+    // Stay off until the helper is actually reachable.
+    autoEnabled = false;
+    stopAutoPolling();
+    $("autoToggle").checked = false;
+    $("autoCheckBtn").hidden = true;
+    $("autoHint").textContent = "Start expense-server.py to watch SMS";
+    setAutoStatus("Relay offline", "error");
+    return false;
+  }
+
+  autoEnabled = true;
+  setAutoStatus("Starting…", "busy");
   startAutoPolling();
   autoImportTick(true);
+  return true;
+}
+
+// Explain the feature and ask for explicit consent before every visit.
+function openAutoModal() {
+  $("autoModalMessage").textContent = "";
+  const button = $("autoEnableBtn");
+
+  if (!RELAY_BASE) {
+    button.disabled = true;
+    button.textContent = "Local app only";
+    $("autoModalMessage").textContent =
+      "This hosted copy has no local relay. Auto-import works only when you run expense-server.py " +
+      "on your own computer and open the app from localhost or the file on that computer.";
+  } else {
+    button.disabled = false;
+    button.textContent = "Turn on auto-import";
+    checkAutoServer().then(function (ok) {
+      if (!ok) {
+        $("autoModalMessage").textContent =
+          "No relay answered on this PC. Start expense-server.py first, then try again.";
+      }
+    });
+  }
+
+  openModal("autoModal");
+}
+
+async function confirmAutoEnable() {
+  const button = $("autoEnableBtn");
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = "Connecting…";
+  $("autoModalMessage").textContent = "";
+
+  const ok = await enableAutoImport(true);
+
+  button.disabled = false;
+  button.textContent = originalLabel;
+
+  if (ok) {
+    closeModal("autoModal");
+  } else if (!$("autoModalMessage").textContent) {
+    $("autoModalMessage").textContent =
+      "Couldn't reach the relay. Start expense-server.py on this computer, then try again.";
+  }
 }
 
 
@@ -3067,6 +4098,9 @@ function handleManualSubmit(event) {
     type: $("mType").value,
     category: $("mCategory").value || "Other"
   };
+
+  // Remember the merchant -> category choice for future AI results.
+  learnCategory(fields.merchant, fields.category);
 
   // ---- EDIT MODE: change the existing transaction in place ----
   if (editingId) {
@@ -3148,6 +4182,787 @@ function exportCSV() {
   setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
 
   setStatus("CSV downloaded.");
+}
+
+
+/* =========================================================
+   8b. BACKUP, RESTORE & DATA SAFETY
+   ========================================================= */
+
+// Read the encrypted payload (if app lock is on) without decrypting it.
+function readVaultPayload() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data && typeof data === "object" && !Array.isArray(data) && data.enc === VAULT_FORMAT) {
+      return data;
+    }
+  } catch (err) { /* damaged storage is reported by the boot code */ }
+  return null;
+}
+
+function backupDateLabel(ms) {
+  return new Date(ms).toLocaleDateString("en-IN", {
+    day: "2-digit", month: "short", year: "numeric"
+  });
+}
+
+function updateLastBackupUI() {
+  let last = 0;
+  try { last = Number(localStorage.getItem(LAST_BACKUP_KEY)) || 0; } catch (err) { /* blocked */ }
+
+  const text = $("lastBackupText");
+  if (text) {
+    text.textContent = last ? "Last backup: " + backupDateLabel(last) + "." : "No backup yet.";
+  }
+}
+
+// Keeps the count pill and backup date fresh whenever the ledger renders.
+function updateDataSafety() {
+  const count = transactions.length;
+  const pill = $("dataCount");
+  if (pill) pill.textContent = count + " transaction" + (count === 1 ? "" : "s");
+  updateLastBackupUI();
+}
+
+// Gentle reminder: show only when there is data and the last backup is 14+ days old.
+function updateBackupBanner() {
+  const banner = $("backupBanner");
+  if (!banner) return;
+
+  let last = 0;
+  let dismissed = 0;
+  try {
+    last = Number(localStorage.getItem(LAST_BACKUP_KEY)) || 0;
+    dismissed = Number(localStorage.getItem(BACKUP_DISMISS_KEY)) || 0;
+  } catch (err) { /* storage blocked — no reminder possible */ }
+
+  const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+  const sevenDays = 7 * 24 * 60 * 60 * 1000;
+  const oldBackup = !last || (Date.now() - last) >= fourteenDays;
+  const recentlyDismissed = dismissed && (Date.now() - dismissed) < sevenDays;
+
+  banner.hidden = !(transactions.length && oldBackup && !recentlyDismissed);
+}
+
+function dismissBackupBanner() {
+  try { localStorage.setItem(BACKUP_DISMISS_KEY, String(Date.now())); } catch (err) { /* ignore */ }
+  updateBackupBanner();
+}
+
+// Build the plain-JSON backup. The API key, PIN and auto-import
+// settings are deliberately NOT included.
+function makeBackup() {
+  return {
+    app: "Expenses Tracker",
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    transactions: transactions.map(function (t) {
+      const item = {
+        id: t.id,
+        date: t.date,
+        merchant: t.merchant,
+        amount: t.amount,
+        type: t.type,
+        category: t.category
+      };
+      if (t.auto) item.auto = true;
+      if (t.photo) item.photo = true;
+      return item;
+    }),
+    rules: loadRules()
+  };
+}
+
+async function downloadBackup() {
+  // Let any queued encrypted write finish first.
+  try { await saveChain; } catch (err) { /* already reported */ }
+
+  if (lockMeta) {
+    const ok = confirm(
+      "App lock is on, but backup files are plain JSON and are NOT encrypted.\n\n" +
+      "Anyone who opens the file can read your transactions. Keep it somewhere safe.\n\n" +
+      "Download the backup now?"
+    );
+    if (!ok) return;
+  }
+
+  const data = makeBackup();
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json;charset=utf-8"
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "expenses-backup-" + todayISO() + ".json";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+
+  try {
+    localStorage.setItem(LAST_BACKUP_KEY, String(Date.now()));
+    localStorage.removeItem(BACKUP_DISMISS_KEY);
+  } catch (err) { /* storage blocked — the file still downloaded */ }
+
+  updateDataSafety();
+  updateBackupBanner();
+  setStatus("Backup downloaded. Keep the JSON file somewhere safe.");
+}
+
+function setRestoreStatus(message) {
+  const box = $("restoreStatus");
+  if (box) box.textContent = message;
+}
+
+// Validate a parsed backup file. Accepts the current format and the
+// older "plain array" format. Every row is sanitized again.
+function parseBackup(raw) {
+  let file = raw;
+
+  if (Array.isArray(file)) file = { transactions: file };
+  if (!file || typeof file !== "object") {
+    throw new Error("That file is not an Expenses Tracker backup.");
+  }
+  if (file.format && file.format !== BACKUP_FORMAT) {
+    throw new Error("That file is not an Expenses Tracker backup.");
+  }
+
+  const version = Number(file.version || 1);
+  if (version > BACKUP_VERSION) {
+    throw new Error("That backup was made by a newer version of Expenses Tracker. Update the app first.");
+  }
+  if (!Array.isArray(file.transactions)) {
+    throw new Error("That backup does not contain a transactions list.");
+  }
+
+  const clean = [];
+  const ids = new Set();
+  let invalid = 0;
+
+  file.transactions.slice(0, MAX_TRANSACTIONS).forEach(function (item) {
+    const transaction = sanitizeTransaction(item, { keepId: true, applyRules: false });
+    if (!transaction) { invalid++; return; }
+
+    // IDs must stay unique or edit/delete buttons could target the wrong row.
+    if (ids.has(transaction.id)) transaction.id = uid();
+    ids.add(transaction.id);
+    clean.push(transaction);
+  });
+
+  if (!clean.length && invalid) {
+    throw new Error("None of the transactions in that file were valid.");
+  }
+
+  return {
+    transactions: clean,
+    rules: sanitizeRules(file.rules),
+    invalid: invalid,
+    version: version,
+    exportedAt: file.exportedAt || ""
+  };
+}
+
+async function handleRestoreFile(event, forLockScreen) {
+  const input = event.target;
+  const file = input.files && input.files[0];
+  input.value = ""; // allow choosing the same file again later
+  if (!file) return;
+
+  try {
+    if (file.size > MAX_BACKUP_BYTES) {
+      throw new Error("That file is larger than 5 MB. Choose an Expenses Tracker backup.");
+    }
+
+    let raw;
+    try {
+      raw = JSON.parse(await file.text());
+    } catch (err) {
+      throw new Error("That file is not valid JSON. Choose an Expenses Tracker backup.");
+    }
+
+    const data = parseBackup(raw);
+    data.filename = file.name;
+
+    if (forLockScreen) {
+      if (!confirm(
+        "Restore this backup and turn off app lock?\n\n" +
+        "The locked data in this browser will be replaced by the backup file. " +
+        "This cannot be undone."
+      )) return;
+
+      transactions = data.transactions.slice();
+      lockMeta = null;
+      vaultKey = null;
+      categoryRulesCache = null;
+      saveRules(data.rules);
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+      } catch (err) {
+        throw new Error("This browser blocked storage, so the backup could not be restored.");
+      }
+
+      selectedMonth = "";
+      hideLockScreen();
+      updateLockUI();
+      renderAll();
+      setStatus("Backup restored. App lock is now off.");
+      return;
+    }
+
+    pendingRestore = data;
+    const ruleCount = Object.keys(data.rules).length;
+    $("restoreSummary").textContent =
+      "File: " + file.name + " · " + data.transactions.length + " transaction" +
+      (data.transactions.length === 1 ? "" : "s") + " · " + ruleCount + " learned rule" +
+      (ruleCount === 1 ? "" : "s") +
+      (data.invalid ? " · " + data.invalid + " invalid row" + (data.invalid === 1 ? "" : "s") + " skipped" : "") +
+      (data.exportedAt ? " · exported " + backupDateLabel(Date.parse(data.exportedAt) || Date.now()) : "");
+    $("restoreMessage").textContent = "";
+    openModal("restoreModal");
+    setRestoreStatus("Loaded " + file.name + ". Choose Merge or Replace.");
+  } catch (err) {
+    if (forLockScreen) {
+      $("unlockMessage").textContent = err.message || "Could not read that backup.";
+    } else {
+      setRestoreStatus(err.message || "Could not read that backup file.");
+    }
+  }
+}
+
+// Current rules win; imported rules only fill gaps.
+function mergeRestoredRules(importedRules) {
+  const current = loadRules();
+  saveRules(Object.assign({}, importedRules, current));
+}
+
+function mergeRestore() {
+  if (!pendingRestore) return;
+
+  const keys = new Set(transactions.map(transactionKey));
+  const ids = new Set(transactions.map(function (t) { return t.id; }));
+  const incoming = [];
+  let skipped = 0;
+
+  pendingRestore.transactions.forEach(function (transaction) {
+    if (keys.has(transactionKey(transaction))) { skipped++; return; }
+
+    const copy = Object.assign({}, transaction);
+    if (ids.has(copy.id)) copy.id = uid();
+
+    keys.add(transactionKey(copy));
+    ids.add(copy.id);
+    incoming.push(copy);
+  });
+
+  transactions = incoming.concat(transactions);
+  mergeRestoredRules(pendingRestore.rules);
+  saveTransactions();
+
+  const total = pendingRestore.transactions.length;
+  pendingRestore = null;
+  selectedMonth = "";
+  closeModal("restoreModal");
+  renderAll();
+
+  const message = "Merged " + incoming.length + " new transaction" +
+    (incoming.length === 1 ? "" : "s") +
+    (skipped ? " · skipped " + skipped + " duplicate" + (skipped === 1 ? "" : "s") : "") +
+    (total ? "." : ".");
+  setRestoreStatus(message);
+  setStatus(message);
+}
+
+function replaceRestore() {
+  if (!pendingRestore) return;
+
+  if (!confirm(
+    "Replace ALL current transactions with this backup?\n\n" +
+    "Your current list is deleted first. This cannot be undone unless you have another backup."
+  )) return;
+
+  transactions = pendingRestore.transactions.slice();
+  saveRules(pendingRestore.rules);
+  saveTransactions();
+
+  const count = transactions.length;
+  pendingRestore = null;
+  selectedMonth = "";
+  closeModal("restoreModal");
+  renderAll();
+
+  const message = "Replaced everything with " + count + " transaction" + (count === 1 ? "" : "s") + ".";
+  setRestoreStatus(message);
+  setStatus(message);
+}
+
+async function updatePersistState() {
+  const state = $("persistState");
+  const button = $("persistBtn");
+  if (!state) return;
+
+  if (!navigator.storage || typeof navigator.storage.persisted !== "function") {
+    state.textContent = "This browser cannot request persistent storage. Keep a JSON backup.";
+    if (button) button.disabled = true;
+    return;
+  }
+
+  try {
+    const persisted = await navigator.storage.persisted();
+    if (persisted) {
+      state.textContent = "Protected: this browser will try not to clear your data.";
+      if (button) button.hidden = true;
+    } else {
+      state.textContent = "Not protected yet. The browser may clear data when space is low.";
+      if (button) button.hidden = false;
+    }
+  } catch (err) {
+    state.textContent = "This browser could not report its storage protection.";
+  }
+}
+
+async function requestPersistentStorage() {
+  const state = $("persistState");
+  if (!navigator.storage || typeof navigator.storage.persist !== "function") {
+    if (state) state.textContent = "This browser cannot request persistent storage. Keep a JSON backup.";
+    return;
+  }
+
+  try {
+    const granted = await navigator.storage.persist();
+    if (state) {
+      state.textContent = granted
+        ? "Protected: this browser will try not to clear your data."
+        : "The browser did not grant protection. Keep regular JSON backups.";
+    }
+    if (granted) {
+      const button = $("persistBtn");
+      if (button) button.hidden = true;
+    }
+    setStatus(granted ? "Persistent storage granted." : "Persistent storage was not granted — keep backups.");
+  } catch (err) {
+    if (state) state.textContent = "The request failed. Keep a JSON backup.";
+  }
+}
+
+async function deleteAllData() {
+  if (!confirm(
+    "Delete ALL Expenses Tracker data from this browser?\n\n" +
+    "This removes your transactions, learned categories, API key, backup reminder and app lock."
+  )) return;
+
+  if (!confirm(
+    "Last check: this cannot be undone.\n\n" +
+    "Backup files already saved on your device are NOT touched. " +
+    "Do you want to delete everything now?"
+  )) return;
+
+  // Let any queued encrypted write finish, then remove every app key.
+  try { await saveChain; } catch (err) { /* ignore */ }
+
+  if (autoEnabled) enableAutoImport(false);
+
+  [STORAGE_KEY, KEY_STORAGE, RULES_STORAGE, AUTO_STORAGE, LAST_BACKUP_KEY, BACKUP_DISMISS_KEY]
+    .forEach(function (key) {
+      try { localStorage.removeItem(key); } catch (err) { /* ignore */ }
+    });
+  try { sessionStorage.removeItem(KEY_SESSION); } catch (err) { /* ignore */ }
+
+  categoryRulesCache = null;
+  transactions = [];
+  lockMeta = null;
+  vaultKey = null;
+  pendingRestore = null;
+  reviewItems = [];
+  editingId = null;
+  pendingPhoto = false;
+  selectedMonth = "";
+  searchQuery = "";
+
+  $("smsInput").value = "";
+  $("searchInput").value = "";
+  $("apiKeyInput").value = "";
+  $("manualForm").reset();
+  $("mDate").value = todayISO();
+  $("mType").value = "debit";
+  $("mCategory").value = "Other";
+  setRestoreStatus("Nothing restored yet.");
+  hideError();
+  setKeyMessage("");
+  updateKeyUI();
+  updateLockUI();
+  renderAll();
+  updatePersistState();
+  setStatus("All Expenses Tracker data was deleted from this browser.");
+}
+
+
+/* =========================================================
+   8c. PRIVACY PREVIEW
+   Shows the masked text exactly as it will leave the device.
+   ========================================================= */
+
+function openPrivacyPreview() {
+  const body = $("privacyBody");
+  if (!body) return;
+
+  const lines = getSmsLines();
+  body.innerHTML = "";
+
+  const intro = document.createElement("p");
+  intro.className = "key-note";
+
+  if (!lines.length) {
+    intro.textContent = "Paste at least one bank message first, then open this preview again.";
+    body.appendChild(intro);
+    openModal("privacyModal");
+    return;
+  }
+
+  const masked = lines.map(maskSensitive);
+  intro.textContent =
+    "This is the exact message text after masking on your device. If you tap Categorize, " +
+    "this text is sent to api.anthropic.com (Anthropic) using the model claude-haiku-5-5. " +
+    "Your API key travels only in the request header, never inside this text.";
+
+  const pre = document.createElement("div");
+  pre.className = "preview-box";
+  pre.textContent = masked.map(function (line, i) { return (i + 1) + ". " + line; }).join("\n");
+
+  const note = document.createElement("p");
+  note.className = "small-muted";
+  note.style.marginTop = "12px";
+  note.textContent =
+    "What was replaced: emails → [email], UPI IDs → [upi], phone numbers → [phone], " +
+    "and long account/card numbers keep only their last 4 digits. " +
+    "Bill photos are sent as images and cannot be masked; this preview covers pasted text only.";
+
+  body.appendChild(intro);
+  body.appendChild(pre);
+  body.appendChild(note);
+  openModal("privacyModal");
+}
+
+
+/* =========================================================
+   8d. APP LOCK (AES-GCM + PBKDF2)
+   The PIN is never stored. It derives a key in memory; only the
+   encrypted payload is written to localStorage.
+   ========================================================= */
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(text) {
+  const binary = atob(String(text || ""));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function cryptoAvailable() {
+  return Boolean(
+    window.crypto &&
+    window.crypto.subtle &&
+    typeof window.crypto.getRandomValues === "function" &&
+    window.TextEncoder &&
+    window.TextDecoder
+  );
+}
+
+function randomBytes(length) {
+  const bytes = new Uint8Array(length);
+  window.crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+// PBKDF2-SHA-256 stretches the PIN into an AES-GCM key.
+async function deriveVaultKey(pin, salt, iterations) {
+  const material = await window.crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(pin),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+
+  return window.crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+async function encryptTransactions(list, key, meta) {
+  const iv = randomBytes(12);
+  const plain = new TextEncoder().encode(JSON.stringify(list));
+  const cipher = await window.crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, plain);
+
+  const payload = {
+    enc: VAULT_FORMAT,
+    salt: bytesToBase64(meta.salt),
+    iterations: meta.iterations,
+    iv: bytesToBase64(iv),
+    data: bytesToBase64(new Uint8Array(cipher))
+  };
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+async function decryptVault(payload, pin) {
+  if (!cryptoAvailable()) {
+    throw new Error("This browser cannot decrypt data (Web Crypto is unavailable). Use the browser where you enabled the lock.");
+  }
+  if (!payload || payload.enc !== VAULT_FORMAT) {
+    throw new Error("No encrypted data was found in this browser.");
+  }
+
+  const salt = base64ToBytes(payload.salt);
+  const iv = base64ToBytes(payload.iv);
+  const data = base64ToBytes(payload.data);
+  const iterations = Number(payload.iterations) || PBKDF2_ITERATIONS;
+
+  if (salt.length < 8 || iv.length !== 12 || !data.length) {
+    throw new Error("The saved lock data looks damaged. Restore a backup if you have one.");
+  }
+  if (iterations < 100000 || iterations > 1000000) {
+    throw new Error("The saved lock settings look damaged. Restore a backup if you have one.");
+  }
+
+  const key = await deriveVaultKey(pin, salt, iterations);
+
+  let plain;
+  try {
+    plain = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, data);
+  } catch (err) {
+    throw new Error("That PIN is not correct.");
+  }
+
+  let list;
+  try {
+    list = JSON.parse(new TextDecoder().decode(plain));
+  } catch (err) {
+    throw new Error("The decrypted data was not readable. Restore a backup if you have one.");
+  }
+  if (!Array.isArray(list)) {
+    throw new Error("The decrypted data was not a transaction list. Restore a backup if you have one.");
+  }
+
+  return {
+    key: key,
+    meta: { salt: salt, iterations: iterations },
+    transactions: list
+      .slice(0, MAX_TRANSACTIONS)
+      .map(function (t) { return sanitizeTransaction(t, { keepId: true, applyRules: false }); })
+      .filter(Boolean)
+  };
+}
+
+function setLockMessage(elementId, text, isError) {
+  const box = $(elementId);
+  if (!box) return;
+  box.textContent = text || "";
+  box.classList.toggle("error", Boolean(isError));
+}
+
+function updateLockUI() {
+  const on = Boolean(lockMeta);
+  const label = $("lockBtnLabel");
+  if (label) label.textContent = on ? "App lock: on" : "App lock: off";
+  if ($("lockSetupBox")) $("lockSetupBox").hidden = on;
+  if ($("lockManageBox")) $("lockManageBox").hidden = !on;
+}
+
+function showLockScreen(message) {
+  document.body.classList.add("locked");
+  const screen = $("lockScreen");
+  if (screen) screen.hidden = false;
+  if (message) $("unlockMessage").textContent = message;
+  setTimeout(function () {
+    const pin = $("unlockPin");
+    if (pin) pin.focus({ preventScroll: true });
+  }, 80);
+}
+
+function hideLockScreen() {
+  document.body.classList.remove("locked");
+  const screen = $("lockScreen");
+  if (screen) screen.hidden = true;
+  $("unlockPin").value = "";
+  $("unlockMessage").textContent = "";
+}
+
+function openLockPanel() {
+  updateLockUI();
+  setLockMessage("lockMessage", "");
+  setLockMessage("lockOffMessage", "");
+  $("lockPin").value = "";
+  $("lockPin2").value = "";
+  $("lockOffPin").value = "";
+
+  if (!lockMeta && !cryptoAvailable()) {
+    setLockMessage("lockMessage", "This browser does not support the Web Crypto API, so app lock cannot be enabled here.", true);
+    $("lockEnableBtn").disabled = true;
+  } else {
+    $("lockEnableBtn").disabled = false;
+  }
+
+  openModal("lockPanel");
+}
+
+async function enableAppLock() {
+  if (lockMeta) return;
+
+  if (!cryptoAvailable()) {
+    setLockMessage("lockMessage", "This browser cannot encrypt data (Web Crypto is unavailable).", true);
+    return;
+  }
+
+  const pin = $("lockPin").value;
+  const repeated = $("lockPin2").value;
+
+  if (!/^\d{4,12}$/.test(pin)) {
+    setLockMessage("lockMessage", "Choose a PIN of 4 to 12 digits (numbers only).", true);
+    $("lockPin").focus();
+    return;
+  }
+  if (pin !== repeated) {
+    setLockMessage("lockMessage", "The two PINs do not match. Try again.", true);
+    $("lockPin2").focus();
+    return;
+  }
+
+  const button = $("lockEnableBtn");
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = "Encrypting…";
+  setLockMessage("lockMessage", "Encrypting your data on this device…");
+
+  try {
+    // Let any earlier plaintext save finish first.
+    try { await saveChain; } catch (err) { /* ignore */ }
+
+    const meta = { salt: randomBytes(16), iterations: PBKDF2_ITERATIONS };
+    const key = await deriveVaultKey(pin, meta.salt, meta.iterations);
+    await encryptTransactions(transactions.slice(), key, meta);
+
+    lockMeta = meta;
+    vaultKey = key;
+    $("lockPin").value = "";
+    $("lockPin2").value = "";
+    updateLockUI();
+    setLockMessage("lockMessage", "App lock is on. Your data is now encrypted at rest.");
+    setStatus("App lock turned on. You can lock the app from the sidebar.");
+    setTimeout(function () { closeModal("lockPanel"); }, 1200);
+  } catch (err) {
+    setLockMessage("lockMessage", "Could not turn on app lock: " + (err.message || "unknown error"), true);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalLabel;
+  }
+}
+
+async function unlockApp() {
+  const pin = $("unlockPin").value;
+
+  if (!/^\d{4,12}$/.test(pin)) {
+    $("unlockMessage").textContent = "Enter your 4 to 12 digit PIN.";
+    return;
+  }
+
+  const button = $("unlockBtn");
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = "Unlocking…";
+  $("unlockMessage").textContent = "";
+
+  try {
+    const result = await decryptVault(readVaultPayload(), pin);
+
+    transactions = result.transactions;
+    lockMeta = result.meta;
+    vaultKey = result.key;
+
+    hideLockScreen();
+    updateLockUI();
+    renderAll();
+    updatePersistState();
+    setStatus("Unlocked. Your data was decrypted on this device.");
+  } catch (err) {
+    $("unlockMessage").textContent = err.message || "That PIN is not correct.";
+    $("unlockPin").select();
+  } finally {
+    button.disabled = false;
+    button.textContent = originalLabel;
+  }
+}
+
+async function lockNow() {
+  if (!lockMeta) return;
+
+  try { await saveChain; } catch (err) { /* ignore */ }
+
+  vaultKey = null;
+  transactions = [];
+  closeModal("lockPanel");
+  renderAll();
+  showLockScreen("");
+}
+
+async function disableAppLock() {
+  if (!lockMeta) return;
+
+  const pin = $("lockOffPin").value;
+  if (!/^\d{4,12}$/.test(pin)) {
+    setLockMessage("lockOffMessage", "Enter your current PIN to turn off app lock.", true);
+    $("lockOffPin").focus();
+    return;
+  }
+
+  const button = $("lockDisableBtn");
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = "Checking…";
+  setLockMessage("lockOffMessage", "Checking your PIN…");
+
+  try {
+    const result = await decryptVault(readVaultPayload(), pin);
+
+    // Write plaintext only after the PIN is verified.
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(result.transactions));
+    } catch (err) {
+      throw new Error("This browser blocked storage, so app lock could not be turned off.");
+    }
+
+    try { await saveChain; } catch (err) { /* ignore */ }
+
+    lockMeta = null;
+    vaultKey = null;
+    transactions = result.transactions;
+    $("lockOffPin").value = "";
+    updateLockUI();
+    setLockMessage("lockOffMessage", "App lock is off. Your data is no longer encrypted at rest.");
+    setStatus("App lock turned off.");
+    setTimeout(function () { closeModal("lockPanel"); }, 1200);
+  } catch (err) {
+    setLockMessage("lockOffMessage", err.message || "That PIN is not correct.", true);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalLabel;
+  }
 }
 
 
@@ -3291,12 +5106,13 @@ $("txBody").addEventListener("change", function (event) {
   if (!transaction) return;
 
   transaction.category = event.target.value;
+  learnCategory(transaction.merchant, transaction.category);
   saveTransactions();
 
   renderSummary();
   renderDonut();
   renderChart();
-  setStatus("Category updated.");
+  setStatus("Category updated and remembered for this merchant.");
 });
 
 // Delete button inside the table
@@ -3337,16 +5153,142 @@ $("sampleBtn").addEventListener("click", function () {
 });
 
 
+/* ---- Review screen ---- */
+
+$("reviewList").addEventListener("change", function (event) {
+  const check = event.target.closest("[data-check]");
+
+  if (check) {
+    const item = reviewItems[Number(check.getAttribute("data-check"))];
+    if (item) item.checked = check.checked;
+    if (check.closest(".review-item")) {
+      check.closest(".review-item").classList.toggle("skipped", !check.checked);
+    }
+    updateReviewSummary();
+    return;
+  }
+
+  updateReviewField(event);
+});
+
+// Typing in an amount/merchant/date updates the draft immediately.
+$("reviewList").addEventListener("input", updateReviewField);
+$("reviewCancelBtn").addEventListener("click", function () {
+  closeModal("reviewModal");
+  setStatus("Review cancelled. Nothing was added.");
+});
+$("reviewSaveBtn").addEventListener("click", saveReview);
+
+
+/* ---- Backup and restore ---- */
+
+["sidebarBackupBtn", "backupBtn", "bannerBackupBtn"].forEach(function (id) {
+  const button = $(id);
+  if (button) button.addEventListener("click", downloadBackup);
+});
+$("bannerDismissBtn").addEventListener("click", dismissBackupBanner);
+
+["sidebarRestoreBtn", "restoreBtn"].forEach(function (id) {
+  const button = $(id);
+  if (button) {
+    button.addEventListener("click", function () { $("restoreInput").click(); });
+  }
+});
+$("restoreInput").addEventListener("change", function (event) {
+  handleRestoreFile(event, false);
+});
+$("restoreCancelBtn").addEventListener("click", function () {
+  pendingRestore = null;
+  closeModal("restoreModal");
+});
+$("restoreMergeBtn").addEventListener("click", mergeRestore);
+$("restoreReplaceBtn").addEventListener("click", replaceRestore);
+
+$("persistBtn").addEventListener("click", requestPersistentStorage);
+$("deleteAllBtn").addEventListener("click", deleteAllData);
+
+
+/* ---- Privacy preview ---- */
+
+$("privacyPreviewBtn").addEventListener("click", openPrivacyPreview);
+
+
+/* ---- App lock ---- */
+
+$("lockBtn").addEventListener("click", openLockPanel);
+$("lockEnableBtn").addEventListener("click", enableAppLock);
+$("lockNowBtn").addEventListener("click", lockNow);
+$("lockDisableBtn").addEventListener("click", disableAppLock);
+$("unlockBtn").addEventListener("click", unlockApp);
+$("unlockPin").addEventListener("keydown", function (event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    unlockApp();
+  }
+});
+$("lockRestoreBtn").addEventListener("click", function () {
+  $("lockRestoreInput").click();
+});
+$("lockRestoreInput").addEventListener("change", function (event) {
+  handleRestoreFile(event, true);
+});
+
+
+/* ---- Live auto-import (opt-in for every visit) ---- */
+
+function setupAutoImportUi() {
+  $("autoToggle").addEventListener("change", function (event) {
+    if (event.target.checked) {
+      // Never switch on silently: show the explanation first.
+      event.target.checked = false;
+      openAutoModal();
+    } else {
+      enableAutoImport(false);
+    }
+  });
+
+  $("autoCheckBtn").addEventListener("click", function () {
+    autoImportTick(true);
+  });
+  $("autoInfoBtn").addEventListener("click", openAutoModal);
+  $("autoCancelBtn").addEventListener("click", function () {
+    closeModal("autoModal");
+  });
+  $("autoEnableBtn").addEventListener("click", confirmAutoEnable);
+
+  if (!RELAY_BASE) {
+    // Hosted copy (e.g. GitHub Pages): there is no local server to talk to.
+    $("autoToggle").checked = false;
+    $("autoToggle").disabled = true;
+    $("autoCheckBtn").hidden = true;
+    $("autoHint").textContent = "Local app only — run expense-server.py";
+    setAutoStatus("Local only", "");
+    return;
+  }
+
+  // Local copy: still OFF on every page load.
+  $("autoToggle").checked = false;
+  $("autoCheckBtn").hidden = true;
+  setAutoStatus("Off (default)", "");
+  $("autoHint").textContent = "Off by default · local helper only";
+
+  checkAutoServer().then(function (ok) {
+    if (autoEnabled) return;
+    setAutoStatus("Off (default)", "");
+    $("autoHint").textContent = ok
+      ? "Relay found · turn on only when you need it"
+      : "Off by default · start expense-server.py to use it";
+  });
+}
+
+
 /* =========================================================
    10. START THE APP
    ========================================================= */
 
-// Load this person's saved key (if any) into the dialog.
-const savedKey = getApiKey();
-$("apiKeyInput").value = savedKey;
+// No saved key is pre-filled into the input — the user always types it.
+// The key can be saved in this browser or kept for this tab only.
 updateKeyUI();
-// No auto-popup: scanning bills works without a key. The dialog opens
-// the first time you try to read pasted SMS, or when you click "API key".
 
 // Fill the category dropdown in the add form from CATEGORIES.
 $("mCategory").innerHTML = CATEGORIES.map(function (category) {
@@ -3357,42 +5299,39 @@ $("mDate").value = todayISO();
 $("mCategory").value = "Other";
 $("mType").value = "debit";
 
-// ---- Live auto-import wiring ----
-$("autoToggle").addEventListener("change", function (event) {
-  enableAutoImport(event.target.checked);
-});
-$("autoCheckBtn").addEventListener("click", function () {
-  autoImportTick(true);
-});
+async function bootApp() {
+  const payload = readVaultPayload();
 
-// Restore the switch from last time and see if the relay is running.
-const savedAuto = getAutoSettings();
+  if (payload) {
+    lockMeta = { salt: base64ToBytes(payload.salt), iterations: Number(payload.iterations) || PBKDF2_ITERATIONS };
+    vaultKey = null;
+    transactions = [];
+    showLockScreen("This browser has an encrypted backup. Enter your PIN to open it.");
+  } else {
+    transactions = loadTransactions();
+  }
 
-if (!RELAY_BASE) {
-  // Hosted copy (e.g. GitHub Pages): there is no local server to talk to.
-  $("autoToggle").checked = false;
-  $("autoToggle").disabled = true;
-  $("autoCheckBtn").hidden = true;
-  $("autoHint").textContent = "Local app only — run expense-server.py";
-  setAutoStatus("Local only", "");
-} else {
-  $("autoToggle").checked = savedAuto.enabled;
-  $("autoCheckBtn").hidden = !savedAuto.enabled;
+  renderAll();
+  updateDataSafety();
+  updateBackupBanner();
+  await updatePersistState();
+  setupAutoImportUi();
 
-  checkAutoServer().then(function (ok) {
-    if (!savedAuto.enabled) {
-      setAutoStatus(ok ? "Ready" : "Off", ok ? "on" : "");
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    try {
+      navigator.serviceWorker.register("sw.js").catch(function (err) {
+        console.warn("Service worker not registered:", err);
+      });
+    } catch (err) {
+      console.warn("Service worker not registered:", err);
     }
-  });
-
-  if (savedAuto.enabled) {
-    startAutoPolling();
-    autoImportTick(true);
   }
 }
 
-// Draw everything from localStorage.
-renderAll();
+bootApp();
+
+// The auto-import setup lives in setupAutoImportUi(); nothing starts
+// polling and nothing is restored "on" — it is always opt-in per visit.
 </script>
 </body>
 </html>

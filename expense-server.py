@@ -46,6 +46,17 @@ INBOX = os.path.join(tempfile.gettempdir(), "expense-tracker-inbox.json")
 # One lock so two requests can't write the file at the same time.
 LOCK = threading.Lock()
 
+# Browser origins allowed to read the SMS inbox. Localhost/file use are
+# allowed; any other website is refused by not setting a readable CORS header.
+ALLOWED_ORIGINS = {
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "null",
+}
+
+# Max size of an SMS posting: ~64 KB is far more than a bank message needs.
+MAX_POST_BYTES = 64 * 1024
+
 
 def load_inbox():
     """Return the stored messages (a list). Never raises."""
@@ -86,6 +97,13 @@ class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=ROOT, **kwargs)
 
+    def send_response(self, code, message=None):
+        super().send_response(code, message)
+        # Basic hardening headers on every response.
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Cache-Control", "no-store")
+
     # ---- small helpers -------------------------------------------------
 
     def log_message(self, fmt, *args):
@@ -107,8 +125,13 @@ class Handler(SimpleHTTPRequestHandler):
             pass
 
     def send_cors_headers(self):
-        # Lets the page work even if it's opened as a local file.
-        self.send_header("Access-Control-Allow-Origin", "*")
+        # Lets the page work even if it's opened as a local file, but only
+        # for loopback origins: no random website on the internet can read
+        # (or write) this inbox through the browser.
+        origin = self.headers.get("Origin")
+        allowed = origin is None or origin in ALLOWED_ORIGINS
+        if allowed:
+            self.send_header("Access-Control-Allow-Origin", origin or "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
@@ -172,6 +195,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     def handle_new_sms(self):
         length = int(self.headers.get("Content-Length") or 0)
+        if length > MAX_POST_BYTES:
+            # Refuse huge payloads before reading them into memory.
+            self.send_json({"ok": False, "error": "Message too large for the tracker."}, 413)
+            return
         raw = self.rfile.read(length) if length else b""
         text = raw.decode("utf-8", "replace").strip()
         content_type = (self.headers.get("Content-Type") or "").lower()
@@ -265,6 +292,8 @@ def main():
     print("      http://%s:%d/api/sms" % (lan_ip(), PORT))
     print("")
     print("  Inbox file: %s" % INBOX)
+    print("  Security: CORS is limited to local hosts, responses are no-store,")
+    print("  and postings are limited in size. Use only on trusted Wi-Fi.")
     print("  Keep this window open. Press Ctrl+C to stop.")
     print("")
 
