@@ -1084,25 +1084,42 @@ Assume the user already has salt, oil, water and basic spices.
           localLabel.textContent = "🤖 " + msg;
         });
 
-        // Step 2: ask the local AI using the SAME prompt as Gemini.
+        // Step 2: ask the local AI.
+        // NOTE: the small local model is much weaker than Gemini, so we
+        // ask it ONE simple question and keep the answer short.
+        // (The long Gemini prompt confuses a tiny model.)
         localNote.textContent = "Model ready. Thinking...";
         localLabel.textContent = "🤖 Thinking...";
-        const prompt = window.buildPrompt();
+        const ingredients = input.value.trim();
+        const simplePrompt = "Give 3 easy recipes using: " + ingredients + ". " +
+          "User already has salt, oil, water. " +
+          "Reply with ONLY this JSON, nothing else: " +
+          '{"recipes":[{"name":"Soup","time":"20 min","style":"Boil",' +
+          '"ingredients":[{"item":"potato","quantity":"200 g","have":true}],' +
+          '"steps":["Boil water.","Add potato.","Cook 15 min."]}]} ' +
+          "Keep steps short. Use only ingredients from the list where possible.";
         const messages = [
-          { role: "system", content: "You are a helpful cooking assistant. Reply with ONLY valid JSON, no markdown code fences, no extra text." },
-          { role: "user", content: prompt }
+          { role: "system", content: "You output only JSON." },
+          { role: "user", content: simplePrompt }
         ];
-        const result = await gen(messages, { max_new_tokens: 700, temperature: 0.7, do_sample: true });
+        let text = "";
+        // Try twice: small models sometimes give broken JSON the first time.
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          const result = await gen(messages, { max_new_tokens: 600, temperature: 0.3, do_sample: true });
+          if (Array.isArray(result) && result[0]) {
+            const genText = result[0].generated_text;
+            text = Array.isArray(genText) ? (genText[genText.length - 1] && genText[genText.length - 1].content || "") : String(genText || "");
+          }
+          try { parseRecipes(text); break; } catch (e) {
+            if (attempt === 2) throw e;
+            localNote.textContent = "Answer was messy, trying again...";
+          }
+        }
 
         // Step 3: read the AI's answer and show the recipe cards.
-        let text = "";
-        if (Array.isArray(result) && result[0]) {
-          const genText = result[0].generated_text;
-          text = Array.isArray(genText) ? (genText[genText.length - 1] && genText[genText.length - 1].content || "") : String(genText || "");
-        }
         const recipes = parseRecipes(text);
         window.renderRecipes(recipes);
-        localNote.textContent = "Done. Local AI ran fully in your browser — nothing was sent to any server.";
+        localNote.textContent = "Done (local AI). For better recipes, add a free Gemini key and use the top button — it is much smarter.";
       } catch (err) {
         console.error(err);
         window.showError("We couldn't get recipes from local AI.\n" + (err.message || "Your browser may not support local AI. Try a recent Chrome or Edge browser, or use the Gemini button with a free key."));
