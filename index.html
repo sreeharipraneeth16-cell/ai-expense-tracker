@@ -599,6 +599,16 @@
   .rail { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
   .balance-amount { display: block; font-size: 30px; font-weight: 800; letter-spacing: -.03em; margin: 6px 0 6px; }
 
+  .saving-rows { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .saving-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted); }
+  .saving-row b { color: var(--text); font-size: 13px; }
+  .saving-row.saved b { color: var(--green); }
+  .saving-compare { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .saving-compare-title { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .saving-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .saving-table th, .saving-table td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); color: var(--muted); }
+  .saving-table th { color: var(--text); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+
   .credit-card {
     position: relative; overflow: hidden;
     background: linear-gradient(135deg, #1d1d24, #141418);
@@ -1343,6 +1353,33 @@
       </div>
       <strong class="balance-amount" id="railNet">₹0</strong>
       <small class="stat-sub" id="railNetSub">No transactions yet</small>
+      <div class="saving-rows" id="savingRows">
+        <div class="saving-row">
+          <span>Total received</span>
+          <b id="savReceived">₹0</b>
+        </div>
+        <div class="saving-row">
+          <span>Total spent</span>
+          <b id="savSpent">₹0</b>
+        </div>
+        <div class="saving-row saved">
+          <span>Saved</span>
+          <b id="savSaved">₹0</b>
+        </div>
+        <div class="saving-row">
+          <span>Savings rate</span>
+          <b id="savRate">—</b>
+        </div>
+      </div>
+      <div class="saving-compare" id="savingCompare" hidden>
+        <div class="saving-compare-title">Recent months</div>
+        <table class="saving-table">
+          <thead>
+            <tr><th>Month</th><th>Received</th><th>Spent</th><th>Saved</th></tr>
+          </thead>
+          <tbody id="savingCompareBody"></tbody>
+        </table>
+      </div>
       <div class="actions-row quick-add-row">
         <button id="addBtn" class="btn primary full" type="button">+ Add transaction</button>
         <button id="quickVoiceBtn" class="mic-inline" type="button"
@@ -2163,6 +2200,17 @@ function renderSummary() {
   $("railNet").textContent = inr(net);
   $("railNetSub").textContent = rows.length ? "Net for " + period : "No transactions yet";
   $("balancePeriod").textContent = period;
+
+  // ---- Monthly savings view (for the selected period / month) ----
+  const savedAmount = net; // received - spent
+  const savingsRate = received > 0 ? (savedAmount / received) * 100 : null;
+
+  $("savReceived").textContent = inr(received);
+  $("savSpent").textContent = inr(spent);
+  $("savSaved").textContent = inr(savedAmount);
+  $("savRate").textContent = savingsRate === null ? "—" : Math.round(savingsRate) + "%";
+
+  renderSavingsComparison();
 
   $("cardSpent").textContent = inr(spent);
   $("cardPeriod").textContent = period;
