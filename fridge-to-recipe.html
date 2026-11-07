@@ -506,22 +506,22 @@
     <!-- Get recipes button -->
     <div class="actions">
       <button type="button" class="get-recipes" id="getRecipesBtn">
-        <span class="btn-text" id="btnText">✨ Get recipes (Gemini — needs key, falls back to local AI)</span>
+        <span class="btn-text" id="btnText">✨ Get recipes — Free AI, no key needed</span>
         <span class="loading" id="loadingSpinner" style="display:none;">
           <span class="spinner"></span>
           Cooking up ideas...
         </span>
       </button>
+      <p class="small-note">Free AI uses pollinations.ai online (no account, no key). Your ingredients are sent there. Takes 10–20 seconds.</p>
       <br />
-      <!-- Local AI: runs a small model in your browser. No API key, no server. -->
-      <button type="button" class="get-recipes local-btn" id="freeAiBtn">
+      <!-- Hidden: kept so old code that clicks it still works. The top button now does the same thing. -->
+      <button type="button" class="get-recipes local-btn" id="freeAiBtn" style="display:none;">
         <span id="freeAiBtnText">✨ Free AI — no key needed</span>
       </button>
-      <p class="small-note">Free AI uses pollinations.ai online (no account, no key). Your ingredients are sent there. For 100% private offline, use the local AI below.</p>
       <button type="button" class="get-recipes local-btn" id="localAiBtn">
-        <span id="localAiBtnText">🤖 Use local AI — no key needed (offline)</span>
+        <span id="localAiBtnText">🤖 Local AI offline — slow, no internet needed</span>
       </button>
-      <p class="small-note" id="localAiNote">Local AI downloads a small model once (~200 MB), then works offline. It is slower and less smart than Gemini, but private and free.</p>
+      <p class="small-note" id="localAiNote">⚠️ Local AI is very slow (2–5 minutes) and recipes are basic. Only use if you have no internet. Free AI above is faster and smarter.</p>
     </div>
 
     <!-- Error box -->
@@ -807,7 +807,7 @@ Assume the user already has salt, oil, water and basic spices.
         if (!data) throw new Error(allErrors || 'No response from API');
 
         // Restore the button text
-        btnText.textContent = '✨ Get recipes (Gemini — needs key, falls back to local AI)';
+        btnText.textContent = '✨ Get recipes — Free AI, no key needed';
 
         // Pull the text out of Gemini's reply
         const text = data.candidates && data.candidates[0] && data.candidates[0].content
@@ -1029,23 +1029,42 @@ Assume the user already has salt, oil, water and basic spices.
        - For 100% private offline use, keep the local AI button below.
        ========================================================= -->
   <script>
-    // Free AI handler: uses Pollinations, no key, good quality.
+    // Free AI handler: uses Pollinations POST, no key, good quality.
+    // POST is better than GET for long prompts (no URL length limit).
     async function getFreeRecipes() {
       const input = document.getElementById('ingredientInput');
       if (!input.value.trim()) { showError('Please enter some ingredients first.'); return; }
       const label = document.getElementById('freeAiBtnText');
       const btn = document.getElementById('freeAiBtn');
+      const mainLabel = document.getElementById('btnText');
       btn.disabled = true;
       label.textContent = '✨ Thinking...';
+      if (mainLabel) mainLabel.textContent = '✨ Thinking... (10–20 seconds)';
       errorBox.style.display = 'none';
       resultsEl.innerHTML = '';
+      // Stop waiting after 90 seconds so the page never hangs forever.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 90000);
       try {
         const prompt = buildPrompt(); // same detailed prompt as Gemini
-        // Pollinations simple GET endpoint. model=openai is the smart free model.
-        const url = 'https://text.pollinations.ai/' + encodeURIComponent(prompt) + '?model=openai';
-        const res = await fetch(url);
+        const res = await fetch('https://text.pollinations.ai/openai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: 'openai',
+            messages: [
+              { role: 'system', content: 'You are a cooking assistant. Reply with ONLY valid JSON, no markdown.' },
+              { role: 'user', content: prompt }
+            ]
+          })
+        });
+        clearTimeout(timer);
         if (!res.ok) throw new Error('Free AI is busy (HTTP ' + res.status + '). Please try again in a minute.');
-        const text = await res.text();
+        const data = await res.json();
+        // Pollinations returns OpenAI format: choices[0].message.content
+        const text = data.choices && data.choices[0] && data.choices[0].message
+          ? data.choices[0].message.content : '';
         let recipes;
         try { recipes = JSON.parse(text).recipes; }
         catch (e) {
@@ -1055,11 +1074,16 @@ Assume the user already has salt, oil, water and basic spices.
         }
         renderRecipes(recipes);
       } catch (err) {
+        clearTimeout(timer);
         console.error(err);
-        showError("We couldn't get recipes from Free AI.\n" + (err.message || 'Please try again, or use the local AI button below (offline).'));
+        const msg = (err && err.name === 'AbortError')
+          ? 'Free AI took too long (90 seconds). Please try again.'
+          : (err.message || 'Please try again.');
+        showError("We couldn't get recipes from Free AI.\n" + msg);
       } finally {
         btn.disabled = false;
         label.textContent = '✨ Free AI — no key needed';
+        if (mainLabel) mainLabel.textContent = '✨ Get recipes — Free AI, no key needed';
       }
     }
     document.getElementById('freeAiBtn').addEventListener('click', getFreeRecipes);
@@ -1140,8 +1164,9 @@ Assume the user already has salt, oil, water and basic spices.
         // NOTE: the small local model is much weaker than Gemini, so we
         // ask it ONE simple question and keep the answer short.
         // (The long Gemini prompt confuses a tiny model.)
-        localNote.textContent = "Model ready. Thinking...";
-        localLabel.textContent = "🤖 Thinking...";
+        // It is SLOW (2–5 min). Tell the user clearly so they do not think it froze.
+        localNote.textContent = "⏳ Local AI is thinking... this can take 2–5 minutes. Please wait, do not click again.";
+        localLabel.textContent = "🤖 Thinking... please wait (2–5 min)";
         const ingredients = input.value.trim();
         const simplePrompt = "Give 3 easy recipes using: " + ingredients + ". " +
           "User already has salt, oil, water. " +
@@ -1157,7 +1182,7 @@ Assume the user already has salt, oil, water and basic spices.
         let text = "";
         // Try twice: small models sometimes give broken JSON the first time.
         for (let attempt = 1; attempt <= 2; attempt++) {
-          const result = await gen(messages, { max_new_tokens: 600, temperature: 0.3, do_sample: true });
+          const result = await gen(messages, { max_new_tokens: 350, temperature: 0.3, do_sample: true });
           if (Array.isArray(result) && result[0]) {
             const genText = result[0].generated_text;
             text = Array.isArray(genText) ? (genText[genText.length - 1] && genText[genText.length - 1].content || "") : String(genText || "");
@@ -1178,7 +1203,7 @@ Assume the user already has salt, oil, water and basic spices.
         localNote.textContent = "Local AI could not run in this browser. You can still use the Gemini button with a free key.";
       } finally {
         localBtn.disabled = false;
-        localLabel.textContent = "🤖 Use local AI — no key needed";
+        localLabel.textContent = "🤖 Local AI offline — slow, no internet needed";
       }
     });
   </script>
