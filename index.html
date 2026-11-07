@@ -227,6 +227,7 @@
     gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
   }
   .card-head h2 { margin: 0; font-size: 15px; letter-spacing: -.01em; }
+  .head-text { flex: 1 1 240px; min-width: 0; }
   .card-sub-head h3 {
     margin: 0 0 12px; font-size: 11.5px; letter-spacing: .08em;
     text-transform: uppercase; color: var(--muted);
@@ -262,15 +263,28 @@
   /* ---- Dictation (speech → text) ---- */
   .dictate-bar {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    margin-top: 10px;
+    margin-top: 8px;
   }
-  .mic-btn { gap: 7px; }
-  .mic-btn.listening {
-    border-color: rgba(215, 255, 79, .55);
+  .mic-btn {
+    flex: none;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 16px; border-radius: 999px;
     background: rgba(215, 255, 79, .1);
+    border: 1px solid rgba(215, 255, 79, .45);
+    color: var(--lime); font-weight: 700;
+  }
+  .mic-btn:hover {
+    background: rgba(215, 255, 79, .16);
+    border-color: rgba(215, 255, 79, .65);
+  }
+  .mic-btn .mic-icon { font-size: 15px; line-height: 1; }
+  .mic-btn.listening {
+    background: rgba(215, 255, 79, .18);
+    border-color: rgba(215, 255, 79, .8);
     color: var(--lime);
   }
   .mic-btn.listening .mic-icon { animation: pulse 1s ease-in-out infinite; }
+  .mic-btn:disabled { cursor: not-allowed; opacity: .55; }
   .mic-status {
     flex: 1 1 200px; min-width: 0;
     font-size: 12px; line-height: 1.45; color: var(--muted);
@@ -787,19 +801,21 @@
       <!-- ============ AI IMPORT ============ -->
       <section class="card import-card" id="import" aria-labelledby="importTitle">
         <div class="card-head">
-          <h2 id="importTitle">✦ AI import</h2>
-          <p class="hint">Paste one message per line, or dictate with the mic. OTPs, ads and balance alerts are skipped automatically.</p>
+          <div class="head-text">
+            <h2 id="importTitle">✦ AI import</h2>
+            <p class="hint">Paste a bank message, or tap <b>Dictate</b> and speak — no API key needed. OTPs, ads and balance alerts are skipped automatically.</p>
+          </div>
+          <button id="micBtn" class="btn mic-btn" type="button" aria-pressed="false">
+            <span id="micIcon" class="mic-icon" aria-hidden="true">🎤</span>
+            <span id="micLabel">Dictate</span>
+          </button>
         </div>
 
         <label class="sr-only" for="smsInput">Bank messages and receipts</label>
         <textarea id="smsInput" spellcheck="false" placeholder="Rs.450.00 debited from A/c XX1234 at SWIGGY on 03-11-26&#10;Rs.25,000.00 credited to A/c XX1234 from ACME SALARY on 01-11-26"></textarea>
 
         <div class="dictate-bar">
-          <button id="micBtn" class="btn ghost small mic-btn" type="button" aria-pressed="false">
-            <span id="micIcon" class="mic-icon" aria-hidden="true">🎤</span>
-            <span id="micLabel">Dictate</span>
-          </button>
-          <span id="micStatus" class="mic-status" role="status" aria-live="polite">Or speak a bank message — it types itself.</span>
+          <span id="micStatus" class="mic-status" role="status" aria-live="polite">Speak a bank message — it types itself. No API key needed.</span>
         </div>
 
         <div class="actions-row">
@@ -2652,6 +2668,12 @@ function buildRecognition() {
 function startDictation() {
   if (!SpeechRecognition) return;
 
+  // The microphone needs HTTPS (or localhost). Plain http://LAN-IP won't work.
+  if (!window.isSecureContext) {
+    setMicStatus("Microphone needs a secure page — use the HTTPS GitHub Pages link, or localhost.", "warn");
+    return;
+  }
+
   if (!recognition) recognition = buildRecognition();
 
   try {
@@ -2692,8 +2714,13 @@ if (SpeechRecognition) {
   $("micBtn").addEventListener("click", toggleDictation);
 } else {
   $("micBtn").disabled = true;
-  $("micBtn").title = "Dictation needs Chrome, Edge or Safari";
-  setMicStatus("This browser can't dictate. Try Chrome or Edge.", "warn");
+  if (!window.isSecureContext) {
+    $("micBtn").title = "Microphone needs an HTTPS page";
+    setMicStatus("Microphone needs a secure page. On your phone use the HTTPS link (GitHub Pages), or localhost on this PC.", "warn");
+  } else {
+    $("micBtn").title = "Dictation needs Chrome, Edge or Safari";
+    setMicStatus("This browser can't dictate. Use Chrome, Edge or Safari.", "warn");
+  }
 }
 
 
