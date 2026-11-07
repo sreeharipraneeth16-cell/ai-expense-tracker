@@ -514,8 +514,12 @@
       </button>
       <br />
       <!-- Local AI: runs a small model in your browser. No API key, no server. -->
+      <button type="button" class="get-recipes local-btn" id="freeAiBtn">
+        <span id="freeAiBtnText">✨ Free AI — no key needed</span>
+      </button>
+      <p class="small-note">Free AI uses pollinations.ai online (no account, no key). Your ingredients are sent there. For 100% private offline, use the local AI below.</p>
       <button type="button" class="get-recipes local-btn" id="localAiBtn">
-        <span id="localAiBtnText">🤖 Use local AI — no key needed</span>
+        <span id="localAiBtnText">🤖 Use local AI — no key needed (offline)</span>
       </button>
       <p class="small-note" id="localAiNote">Local AI downloads a small model once (~200 MB), then works offline. It is slower and less smart than Gemini, but private and free.</p>
     </div>
@@ -728,12 +732,12 @@ Assume the user already has salt, oil, water and basic spices.
     // 8. CALL THE GEMINI API
     // ------------------------------------------------------------------
     async function getRecipes() {
-      // No Gemini key? No problem — use the local AI instead (no key needed).
+      // No Gemini key? No problem — use the free AI instead (no key needed).
       // This way the "Get recipes" button works for everyone.
       if (!GEMINI_API_KEY || GEMINI_API_KEY === 'PASTE_YOUR_API_KEY_HERE') {
-        showError('No Gemini key added, so we will use the free local AI instead. Nothing is sent to any server.');
-        const localBtn = document.getElementById('localAiBtn');
-        if (localBtn) localBtn.click();
+        showError('No Gemini key added, so we will use the free AI instead. No key needed.');
+        const freeBtn = document.getElementById('freeAiBtn');
+        if (freeBtn) freeBtn.click();
         return;
       }
 
@@ -1011,6 +1015,54 @@ Assume the user already has salt, oil, water and basic spices.
     renderChips();
     initFilterButtons();
 
+  </script>
+
+  <!-- =========================================================
+       FREE AI — NO API KEY NEEDED (ONLINE)
+       Why we use this for a public website:
+       - An API key in a GitHub Pages file is PUBLIC. Anyone can
+         copy it from "View Source" and misuse it. Never do that.
+       - Pollinations (pollinations.ai) is a free AI service with
+         NO key and NO account. It is made for exactly this.
+       - Your ingredients ARE sent to pollinations.ai when you click.
+         That is shown honestly in the note above the button.
+       - For 100% private offline use, keep the local AI button below.
+       ========================================================= -->
+  <script>
+    // Free AI handler: uses Pollinations, no key, good quality.
+    async function getFreeRecipes() {
+      const input = document.getElementById('ingredientInput');
+      if (!input.value.trim()) { showError('Please enter some ingredients first.'); return; }
+      const label = document.getElementById('freeAiBtnText');
+      const btn = document.getElementById('freeAiBtn');
+      btn.disabled = true;
+      label.textContent = '✨ Thinking...';
+      errorBox.style.display = 'none';
+      resultsEl.innerHTML = '';
+      try {
+        const prompt = buildPrompt(); // same detailed prompt as Gemini
+        // Pollinations simple GET endpoint. model=openai is the smart free model.
+        const url = 'https://text.pollinations.ai/' + encodeURIComponent(prompt) + '?model=openai';
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Free AI is busy (HTTP ' + res.status + '). Please try again in a minute.');
+        const text = await res.text();
+        let recipes;
+        try { recipes = JSON.parse(text).recipes; }
+        catch (e) {
+          const m = text.match(/\{[\s\S]*\}/);
+          if (!m) throw new Error('Could not understand the Free AI answer. Please try again.');
+          recipes = JSON.parse(m[0]).recipes;
+        }
+        renderRecipes(recipes);
+      } catch (err) {
+        console.error(err);
+        showError("We couldn't get recipes from Free AI.\n" + (err.message || 'Please try again, or use the local AI button below (offline).'));
+      } finally {
+        btn.disabled = false;
+        label.textContent = '✨ Free AI — no key needed';
+      }
+    }
+    document.getElementById('freeAiBtn').addEventListener('click', getFreeRecipes);
   </script>
 
   <!-- =========================================================
