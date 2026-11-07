@@ -517,7 +517,7 @@
       <button type="button" class="get-recipes local-btn" id="localAiBtn">
         <span id="localAiBtnText">🤖 Use local AI — no key needed</span>
       </button>
-      <p class="small-note" id="localAiNote">Local AI downloads a small model once (~300 MB), then works offline. It is slower and less smart than Gemini, but private and free.</p>
+      <p class="small-note" id="localAiNote">Local AI downloads a small model once (~200 MB), then works offline. It is slower and less smart than Gemini, but private and free.</p>
     </div>
 
     <!-- Error box -->
@@ -1017,13 +1017,13 @@ Assume the user already has salt, oil, water and basic spices.
        LOCAL AI — NO API KEY NEEDED
        How it works (in simple words):
        1. The first time you click the green button, your browser
-          downloads a SMALL AI model from Hugging Face (free, no key).
-          That download is about 300 MB and happens only once.
+          downloads a SMALL AI model from Hugging Face (free, no key,
+          public model — not blocked). That is about 200 MB, once only.
        2. After that, the AI runs INSIDE your browser on your own
           computer. Your ingredients are never sent to any server.
        3. The small model is slower and less smart than Gemini,
           but it is free, private, and needs no API key at all.
-       We use Qwen2.5-0.5B-Instruct (0.5 billion words of memory,
+       We use SmolLM2-360M-Instruct (made by Hugging Face itself,
        small enough to run on a normal laptop).
        ========================================================= -->
   <script type="module">
@@ -1038,7 +1038,7 @@ Assume the user already has salt, oil, water and basic spices.
     async function loadGenerator(onProgress) {
       if (generator) return generator;
       onProgress("Downloading the small AI model (first time only)... please wait.");
-      generator = await pipeline("text-generation", "Xenova/Qwen2.5-0.5B-Instruct", {
+      generator = await pipeline("text-generation", "HuggingFaceTB/SmolLM2-360M-Instruct", {
         dtype: "q4",
         progress_callback: (p) => {
           // p tells us which file is downloading and how far along it is.
