@@ -506,7 +506,7 @@
     <!-- Get recipes button -->
     <div class="actions">
       <button type="button" class="get-recipes" id="getRecipesBtn">
-        <span class="btn-text" id="btnText">✨ Get recipes</span>
+        <span class="btn-text" id="btnText">✨ Get recipes (Gemini — needs key, falls back to local AI)</span>
         <span class="loading" id="loadingSpinner" style="display:none;">
           <span class="spinner"></span>
           Cooking up ideas...
@@ -728,9 +728,12 @@ Assume the user already has salt, oil, water and basic spices.
     // 8. CALL THE GEMINI API
     // ------------------------------------------------------------------
     async function getRecipes() {
-      // If the API key is still the placeholder, show a friendly message
+      // No Gemini key? No problem — use the local AI instead (no key needed).
+      // This way the "Get recipes" button works for everyone.
       if (!GEMINI_API_KEY || GEMINI_API_KEY === 'PASTE_YOUR_API_KEY_HERE') {
-        showError('Please paste your Google Gemini API key into the GEMINI_API_KEY constant at the top of the script, save the file, and refresh.');
+        showError('No Gemini key added, so we will use the free local AI instead. Nothing is sent to any server.');
+        const localBtn = document.getElementById('localAiBtn');
+        if (localBtn) localBtn.click();
         return;
       }
 
@@ -800,7 +803,7 @@ Assume the user already has salt, oil, water and basic spices.
         if (!data) throw new Error(allErrors || 'No response from API');
 
         // Restore the button text
-        btnText.textContent = '✨ Get recipes';
+        btnText.textContent = '✨ Get recipes (Gemini — needs key, falls back to local AI)';
 
         // Pull the text out of Gemini's reply
         const text = data.candidates && data.candidates[0] && data.candidates[0].content
