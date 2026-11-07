@@ -1046,7 +1046,22 @@ Assume the user already has salt, oil, water and basic spices.
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 90000);
       try {
-        const prompt = buildPrompt(); // same detailed prompt as Gemini
+        // Keep the prompt SHORT for the free model.
+        // The long Gemini prompt makes the free model run out of tokens and fail.
+        const ingredients = input.value.trim();
+        const filters = [
+          selectedDiet !== 'Any' ? 'diet ' + selectedDiet : '',
+          selectedTime !== 'Any' ? selectedTime : '',
+          selectedStyle !== 'Any' ? selectedStyle : '',
+          selectedCuisine !== 'Any' ? selectedCuisine : '',
+          selectedSpice !== 'Any' ? selectedSpice : '',
+          selectedMeal !== 'Any' ? selectedMeal : ''
+        ].filter(Boolean).join(', ');
+        const prompt = "Give 3 easy recipes using: " + ingredients +
+          (filters ? ". Filters: " + filters : "") +
+          ". User has salt, oil, water. " +
+          'Reply ONLY JSON: {"recipes":[{"name":"Soup","time":"20 min","style":"Boil","ingredients":[{"item":"tomato","quantity":"200 g","have":true}],"steps":["Boil water.","Add tomato.","Cook 15 min."]}]} ' +
+          "Keep steps short (2-3 steps per recipe).";
         const res = await fetch('https://text.pollinations.ai/openai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
