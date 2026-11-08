@@ -182,6 +182,65 @@
       .footer-wrap{grid-template-columns:1fr 1fr}
     }
 
+  
+    /* ---------- Recipe details ---------- */
+    .details-view{display:none;max-width:1160px;margin:0 auto;padding:28px 20px 60px}
+    .details-view.open{display:block;animation:fadeUp .4s ease both}
+    .back-btn{background:none;border:none;color:var(--forest);font-weight:700;font-size:.95rem;cursor:pointer;padding:8px 0}
+    .back-btn:hover{color:var(--terra)}
+    .detail-hero{position:relative;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow);margin:14px 0 28px}
+    .detail-hero img{width:100%;height:420px;object-fit:cover;display:block}
+    .detail-hero-overlay{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(to top,rgba(15,46,34,.92),rgba(15,46,34,.35) 60%,transparent);color:#fff;padding:70px 28px 24px}
+    .detail-hero-overlay h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.1;margin-bottom:8px}
+    .detail-hero-overlay p{opacity:.92;max-width:62ch}
+    .tag-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    .tag{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.3);padding:6px 12px;border-radius:999px;font-size:.8rem;font-weight:700}
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
+    .detail-card{background:#fff;border-radius:var(--radius-lg);border:1px solid #F0E4D3;box-shadow:0 6px 24px rgba(48,40,32,.07);padding:26px}
+    .detail-card h2{color:var(--forest);font-size:1.45rem;margin-bottom:14px}
+    .time-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    .time-box{background:var(--ivory);border-radius:16px;padding:16px;text-align:center}
+    .time-box .t-ico{font-size:1.3rem} .time-box b{display:block;color:var(--forest);font-size:1.15rem;margin-top:4px} .time-box span{font-size:.82rem;color:var(--muted);font-weight:600}
+    .servings-ctrl{display:flex;align-items:center;gap:14px;margin:6px 0 16px}
+    .servings-ctrl button{width:44px;height:44px;border-radius:50%;border:2px solid var(--forest);background:#fff;color:var(--forest);font-size:1.3rem;font-weight:700;cursor:pointer;transition:all .18s}
+    .servings-ctrl button:hover{background:var(--forest);color:#fff}
+    .servings-count{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:700;color:var(--forest);min-width:90px;text-align:center}
+    .progress-track{background:#F0E4D3;border-radius:999px;height:10px;overflow:hidden;margin:8px 0 16px}
+    .progress-fill{background:linear-gradient(90deg,var(--forest-2),var(--terra));height:100%;width:0%;border-radius:999px;transition:width .35s ease}
+    .progress-label{font-size:.85rem;color:var(--muted);font-weight:600}
+    .ing-check{display:flex;gap:12px;align-items:flex-start;padding:11px 10px;border-radius:12px;cursor:pointer;transition:background .18s}
+    .ing-check:hover{background:var(--ivory)}
+    .ing-check input{width:20px;height:20px;accent-color:var(--forest);margin-top:2px;flex-shrink:0;cursor:pointer}
+    .ing-check.done .ing-name{text-decoration:line-through;opacity:.55}
+    .ing-qty{margin-left:auto;font-weight:700;color:var(--forest);text-align:right;white-space:nowrap}
+    .ing-note{font-size:.78rem;color:var(--terra-dark)}
+    .cook-step{display:flex;gap:14px;padding:16px;border-radius:16px;border:1px solid #F5EBDC;margin-bottom:12px;transition:all .25s;cursor:pointer}
+    .cook-step.current{border-color:var(--forest);background:var(--ivory);box-shadow:0 8px 24px rgba(27,67,50,.10)}
+    .cook-step.done{opacity:.6} .cook-step.done .step-text{text-decoration:line-through}
+    .cook-step .step-number{width:34px;height:34px}
+    .cook-step.done .step-number{background:var(--terra)}
+    .timer-btn{margin-top:8px;background:var(--sand);border:none;color:var(--ink);font-weight:700;font-size:.82rem;padding:7px 13px;border-radius:999px;cursor:pointer}
+    .timer-btn:hover{background:var(--terra);color:#fff}
+    .timer-display{font-variant-numeric:tabular-nums;font-weight:700;color:var(--forest);margin-left:8px}
+    .cook-nav{display:flex;justify-content:space-between;gap:12px;margin-top:16px}
+    .cook-nav button{padding:12px 22px;border-radius:999px;font-weight:700;cursor:pointer;border:2px solid var(--forest);background:#fff;color:var(--forest);transition:all .18s}
+    .cook-nav button:hover:not(:disabled){background:var(--forest);color:#fff}
+    .cook-nav button:disabled{opacity:.4;cursor:not-allowed}
+    .nutrition-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:12px}
+    .nutri-box{background:var(--ivory);border-radius:16px;padding:16px 10px;text-align:center}
+    .nutri-box b{display:block;font-size:1.3rem;color:var(--forest)} .nutri-box span{font-size:.8rem;color:var(--muted);font-weight:600}
+    .disclaimer{font-size:.82rem;color:var(--muted);margin-top:12px;font-style:italic}
+    .sub-row{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #F5EBDC}
+    .sub-row:last-child{border-bottom:none}
+    .sub-arrow{color:var(--terra);font-weight:700}
+    .action-row{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+    .action-btn{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:999px;font-weight:700;cursor:pointer;border:2px solid var(--forest);background:var(--forest);color:#fff;transition:all .18s;font-size:.95rem}
+    .action-btn:hover{transform:translateY(-2px)}
+    .action-btn.ghost{background:#fff;color:var(--forest)} .action-btn.ghost:hover{background:var(--ivory)}
+    .action-btn.saved{background:var(--terra);border-color:var(--terra)}
+    .share-status{font-size:.88rem;color:var(--forest-2);font-weight:600;min-height:1.2em}
+    @media (max-width:820px){ .detail-grid{grid-template-columns:1fr} .detail-hero img{height:260px} }
+
   </style>
 </head>
 <body>
@@ -363,6 +422,69 @@
       <p>Dishes you created with Ruvia, saved on this device.</p>
     </div>
     <div id="recentWrap"></div>
+  </section>
+
+
+  <!-- Recipe details view (filled by JS from real generated data) -->
+  <section class="details-view" id="detailsView" aria-label="Recipe details">
+    <button type="button" class="back-btn" id="detailsBack">← Back to recipes</button>
+    <div class="detail-hero">
+      <img id="detailImg" src="" alt="The finished dish" />
+      <div class="detail-hero-overlay">
+        <h1 id="detailName">Recipe</h1>
+        <p id="detailDesc"></p>
+        <div class="tag-row" id="detailTags"></div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button type="button" class="action-btn" id="detailSaveBtn">♡ Save recipe</button>
+      <button type="button" class="action-btn ghost" id="detailShareBtn">↗ Share recipe</button>
+      <span class="share-status" id="shareStatus" role="status"></span>
+    </div>
+    <div class="detail-grid">
+      <div>
+        <div class="detail-card" style="margin-bottom:26px">
+          <h2>Time &amp; difficulty</h2>
+          <div class="time-grid">
+            <div class="time-box"><div class="t-ico">⏱</div><b id="prepTime">—</b><span>Preparation</span></div>
+            <div class="time-box"><div class="t-ico">🍳</div><b id="cookTime">—</b><span>Cooking</span></div>
+            <div class="time-box"><div class="t-ico">✅</div><b id="totalTime">—</b><span>Total time</span></div>
+            <div class="time-box"><div class="t-ico">📊</div><b id="difficulty">—</b><span>Difficulty</span></div>
+          </div>
+          <h2 style="margin-top:26px">Nutrition <span style="font-size:.85rem;color:var(--muted)">(estimate)</span></h2>
+          <div class="nutrition-grid" id="nutritionGrid"></div>
+          <p class="disclaimer">Estimates only — not laboratory-tested. Calculated from ingredient types, per serving at the current serving size.</p>
+        </div>
+        <div class="detail-card">
+          <h2>Easy substitutions</h2>
+          <div id="subList"></div>
+          <p class="disclaimer">Substitutions change flavour and texture slightly — adjust seasoning to taste.</p>
+        </div>
+      </div>
+      <div>
+        <div class="detail-card" style="margin-bottom:26px">
+          <h2>Ingredients</h2>
+          <div class="servings-ctrl">
+            <button type="button" id="servMinus" aria-label="Fewer servings">−</button>
+            <span class="servings-count" id="servCount">2 servings</span>
+            <button type="button" id="servPlus" aria-label="More servings">+</button>
+          </div>
+          <div class="progress-label" id="ingProgressLabel">0 of 0 prepared</div>
+          <div class="progress-track"><div class="progress-fill" id="ingProgress"></div></div>
+          <div id="ingList"></div>
+        </div>
+        <div class="detail-card">
+          <h2>Let's cook — step by step</h2>
+          <div class="progress-label" id="stepProgressLabel">0 of 0 steps done</div>
+          <div class="progress-track"><div class="progress-fill" id="stepProgress"></div></div>
+          <div id="cookSteps"></div>
+          <div class="cook-nav">
+            <button type="button" id="stepPrev">← Previous</button>
+            <button type="button" id="stepNext">Next step →</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- Premium footer -->
@@ -778,6 +900,7 @@ Assume the user already has salt, oil, water and basic spices.
           <div class="steps-section">
             <h3>Instructions</h3>
             <ol class="steps-list">${stepsHtml}</ol>
+            <button type="button" class="btn-primary" data-open-recipe="${index}" style="margin-top:16px;width:100%;justify-content:center">View full recipe →</button>
           </div>
         `;
 
@@ -950,7 +1073,7 @@ Assume the user already has salt, oil, water and basic spices.
       (recipes || []).forEach(r => {
         if (!r || !r.name) return;
         recent = recent.filter(x => x.name !== r.name);
-        recent.unshift({ name: r.name, time: r.time || '—', style: r.style || 'Any', at: Date.now() });
+        recent.unshift({ name: r.name, time: r.time || '—', style: r.style || 'Any', ingredients: r.ingredients || [], steps: r.steps || [], at: Date.now() });
       });
       recent = recent.slice(0, 9);
       try { localStorage.setItem('ruvia_recent', JSON.stringify(recent)); } catch (e) {}
@@ -975,7 +1098,7 @@ Assume the user already has salt, oil, water and basic spices.
           </div>
           <div class="dish-body"><h3>${escapeHtml(r.name)}</h3>
           <div class="dish-meta"><span>⏱ ${escapeHtml(r.time)}</span></div>
-          <a class="explore-link" href="#generatedHeading">View full recipe →</a></div>
+          <button type="button" class="explore-link" data-view-recent="${escapeHtml(r.name)}" style="background:none;border:none;cursor:pointer;font-size:.95rem;font-family:inherit">View full recipe →</button></div>
         </article>`).join('') + '</div>';
       wrap.querySelectorAll('[data-fav]').forEach(b => b.addEventListener('click', () => toggleFav(b.dataset.fav, b)));
     }
@@ -991,6 +1114,295 @@ Assume the user already has salt, oil, water and basic spices.
     navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { navLinks.classList.remove('open'); navToggle.textContent = '☰'; }));
     document.getElementById('heroDiscover').addEventListener('click', () => setTimeout(() => ingredientInput.focus(), 500));
 
+    // ------------------------------------------------------------------
+    // RECIPE DETAILS VIEW (real generated data only)
+    // ------------------------------------------------------------------
+    let detailRecipe = null;      // current recipe being viewed
+    let detailServings = 2;       // current servings (starts at chosen servings)
+    let detailBaseServings = 2;   // servings the quantities were written for
+    let currentStep = 0;
+    let stepTimer = null;
+
+    // Food photos by name (relevant-ish rotation, same pool as cards)
+    function dishImage(name) {
+      const imgs = [
+        'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1466637574441-749b8f19452f?auto=format&fit=crop&w=1200&q=80'
+      ];
+      let h = 0; for (let i = 0; i < String(name).length; i++) h = (h * 31 + String(name).charCodeAt(i)) % 997;
+      return imgs[h % imgs.length];
+    }
+
+    // Recalculate a quantity like "200 g (2 medium)" / "1 cup" / "2" for new servings
+    function scaleQty(qty, ratio) {
+      if (!qty) return '—';
+      let out = String(qty).replace(/(\d+(?:\.\d+)?)/g, (m) => {
+        const n = parseFloat(m) * ratio;
+        return (Math.round(n * 10) / 10).toString();
+      });
+      return out;
+    }
+
+    // Rough nutrition estimate from ingredient types (per serving).
+    // Keyword table = general food knowledge, NOT a lab measurement.
+    const NUTRI = [
+      [['egg'], 70, 6, 0.5, 5], [['rice'], 130, 2.5, 28, 0.5], [['pasta'], 160, 6, 30, 1],
+      [['chicken'], 165, 31, 0, 3.5], [['paneer'], 265, 18, 4, 17], [['milk'], 60, 3, 5, 3],
+      [['cheese'], 110, 7, 0.5, 9], [['potato'], 77, 2, 17, 0.1], [['tomato'], 18, 1, 4, 0.2],
+      [['onion'], 40, 1, 9, 0.1], [['bread'], 80, 3, 14, 1], [['oil'], 120, 0, 0, 14],
+      [['butter'], 100, 0.1, 0, 11], [['flour'], 110, 3, 23, 0.3], [['lentil'], 115, 9, 20, 0.4],
+      [['bean'], 110, 8, 20, 0.5], [['vegetable'], 30, 1.5, 5, 0.2], [['spinach'], 23, 3, 4, 0.4]
+    ];
+    function estimateNutrition(ingredients) {
+      let cal = 0, pro = 0, carb = 0, fat = 0, fib = 0;
+      (ingredients || []).forEach(ing => {
+        const name = String(ing.item || '').toLowerCase();
+        let hit = null;
+        for (const row of NUTRI) { if (row[0].some(k => name.includes(k))) { hit = row; break; } }
+        if (!hit) { cal += 35; pro += 1.5; carb += 5; fat += 1; fib += 0.5; return; }
+        cal += hit[1]; pro += hit[2]; carb += hit[3]; fat += hit[4]; fib += 1;
+      });
+      // Crude per-serving scale: totals above are for a whole 2-serving batch on average
+      const per = Math.max(1, Math.round(detailServings));
+      const div = Math.max(1, detailBaseServings);
+      return { cal: Math.round(cal / div * 2 / per * 2), pro: Math.round(pro / div * 2 / per * 10) / 10, carb: Math.round(carb / div * 2 / per * 10) / 10, fat: Math.round(fat / div * 2 / per * 10) / 10, fib: Math.round(fib / div * 2 / per * 10) / 10 };
+    }
+
+    // Practical substitutions (general culinary knowledge)
+    const SUBS = [
+      ['egg', 'flaxseed', '1 tbsp ground flax + 3 tbsp water per egg', 'More nutty, slightly denser texture.'],
+      ['butter', 'olive oil', 'same amount', 'Lighter, less creamy; fruitier flavour.'],
+      ['milk', 'almond milk', 'same amount', 'Lower fat, slightly sweet and thinner.'],
+      ['rice', 'quinoa', 'same amount', 'Nuttier, more protein, similar cooking time.'],
+      ['chicken', 'paneer', 'same amount', 'Vegetarian, softer texture, soaks up sauce well.'],
+      ['chicken', 'tofu', 'same amount', 'Milder flavour, absorbs spices well.'],
+      ['cheese', 'nutritional yeast', '2 tbsp', 'Cheesy flavour, less rich and salty.'],
+      ['cream', 'coconut milk', 'same amount', 'Richer and slightly sweet; best for curries.'],
+      ['sugar', 'honey', '3/4 amount', 'Sweeter and more floral; add at the end.'],
+      ['flour', 'cornflour', 'same amount', 'Gluten-free, gives a lighter, crispier result.']
+    ];
+    function findSubs(ingredients) {
+      const out = [];
+      (ingredients || []).forEach(ing => {
+        const name = String(ing.item || '').toLowerCase();
+        const hit = SUBS.find(s => name.includes(s[0]));
+        if (hit) out.push({ from: ing.item, to: hit[1], qty: hit[2], note: hit[3] });
+      });
+      return out.slice(0, 4);
+    }
+
+    function parseMinutes(t) { const m = String(t || '').match(/(\d+)/); return m ? parseInt(m[1], 10) : 25; }
+
+    function openRecipeDetails(recipe) {
+      if (!recipe || !recipe.name) return;
+      detailRecipe = recipe;
+      detailBaseServings = selectedServings || 2;
+      detailServings = detailBaseServings;
+      currentStep = 0;
+      if (stepTimer) { clearInterval(stepTimer); stepTimer = null; }
+
+      document.getElementById('detailImg').src = dishImage(recipe.name);
+      document.getElementById('detailImg').alt = recipe.name;
+      document.getElementById('detailName').textContent = recipe.name;
+      const ingNames = (recipe.ingredients || []).map(i => i.item).filter(Boolean);
+      document.getElementById('detailDesc').textContent =
+        'A ' + (recipe.style || 'home-style') + ' dish made with ' + ingNames.slice(0, 4).join(', ') +
+        (ingNames.length > 4 ? ' and more' : '') + '. Simple, delicious and made from what you already have.';
+      const tags = [];
+      if (selectedCuisine && selectedCuisine !== 'Any') tags.push(selectedCuisine);
+      if (selectedMeal && selectedMeal !== 'Any') tags.push(selectedMeal);
+      if (recipe.style) tags.push(recipe.style);
+      document.getElementById('detailTags').innerHTML = tags.map(t => '<span class="tag">' + escapeHtml(t) + '</span>').join('');
+
+      const total = parseMinutes(recipe.time);
+      const prep = Math.max(5, Math.round(total * 0.3));
+      const cook = Math.max(5, total - prep);
+      document.getElementById('prepTime').textContent = prep + ' min';
+      document.getElementById('cookTime').textContent = cook + ' min';
+      document.getElementById('totalTime').textContent = total + ' min';
+      document.getElementById('difficulty').textContent = total <= 15 ? 'Easy' : (total <= 35 ? 'Medium' : 'Hard');
+
+      renderIngredients(); renderSteps(); renderNutrition(); renderSubs(); updateSaveBtn();
+      document.getElementById('shareStatus').textContent = '';
+      const view = document.getElementById('detailsView');
+      view.classList.add('open');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function renderIngredients() {
+      const ratio = detailServings / detailBaseServings;
+      const list = document.getElementById('ingList');
+      list.innerHTML = '';
+      (detailRecipe.ingredients || []).forEach((ing, i) => {
+        const row = document.createElement('label');
+        row.className = 'ing-check';
+        row.innerHTML = '<input type="checkbox" data-ing="' + i + '" />' +
+          '<span><span class="ing-name">' + escapeHtml(ing.item) + '</span>' +
+          (ing.have ? '' : ' <span class="ing-note">(need to get)</span>') + '</span>' +
+          '<span class="ing-qty">' + escapeHtml(scaleQty(ing.quantity, ratio)) + '</span>';
+        list.appendChild(row);
+      });
+      list.querySelectorAll('input[data-ing]').forEach(cb => cb.addEventListener('change', () => {
+        cb.closest('.ing-check').classList.toggle('done', cb.checked);
+        updateIngProgress();
+      }));
+      document.getElementById('servCount').textContent = detailServings + (detailServings === 1 ? ' serving' : ' servings');
+      updateIngProgress();
+    }
+    function updateIngProgress() {
+      const boxes = document.querySelectorAll('#ingList input[data-ing]');
+      const done = document.querySelectorAll('#ingList input[data-ing]:checked').length;
+      const pct = boxes.length ? Math.round(done / boxes.length * 100) : 0;
+      document.getElementById('ingProgress').style.width = pct + '%';
+      document.getElementById('ingProgressLabel').textContent = done + ' of ' + boxes.length + ' prepared (' + pct + '%)';
+    }
+
+    function renderSteps() {
+      const wrap = document.getElementById('cookSteps');
+      wrap.innerHTML = '';
+      (detailRecipe.steps || []).forEach((step, i) => {
+        const el = document.createElement('div');
+        el.className = 'cook-step' + (i === currentStep ? ' current' : '');
+        el.dataset.step = i;
+        const dur = String(step).match(/(\d+)\s*(min|minute|seconds?|sec)/i);
+        el.innerHTML = '<div class="step-number">' + (i + 1) + '</div>' +
+          '<div><div class="step-text">' + escapeHtml(step) + '</div>' +
+          (dur ? '<button type="button" class="timer-btn" data-timer="' + dur[1] + '">⏱ Start ' + dur[1] + ' ' + dur[2] + ' timer</button><span class="timer-display" data-timer-display></span>' : '') +
+          '</div>';
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('.timer-btn')) return;
+          el.classList.toggle('done');
+          updateStepProgress();
+        });
+        wrap.appendChild(el);
+      });
+      wrap.querySelectorAll('[data-timer]').forEach(btn => btn.addEventListener('click', () => startTimer(btn)));
+      document.getElementById('stepPrev').disabled = currentStep <= 0;
+      document.getElementById('stepNext').disabled = currentStep >= (detailRecipe.steps || []).length - 1;
+      updateStepProgress();
+    }
+    function updateStepProgress() {
+      const steps = document.querySelectorAll('#cookSteps .cook-step');
+      const done = document.querySelectorAll('#cookSteps .cook-step.done').length;
+      const pct = steps.length ? Math.round(done / steps.length * 100) : 0;
+      document.getElementById('stepProgress').style.width = pct + '%';
+      document.getElementById('stepProgressLabel').textContent = done + ' of ' + steps.length + ' steps done (' + pct + '%)';
+    }
+    function startTimer(btn) {
+      const mins = parseInt(btn.dataset.timer, 10) || 1;
+      const isSec = /sec/i.test(btn.dataset.timerUnit || '') || mins !== parseInt(btn.dataset.timer, 10);
+      let totalSec = mins * 60;
+      const display = btn.parentElement.querySelector('[data-timer-display]');
+      btn.disabled = true;
+      const tick = () => {
+        display.textContent = Math.floor(totalSec / 60) + ':' + String(totalSec % 60).padStart(2, '0');
+        if (totalSec <= 0) { clearInterval(stepTimer); display.textContent = 'Done! ✅'; btn.disabled = false; return; }
+        totalSec--;
+      };
+      tick();
+      if (stepTimer) clearInterval(stepTimer);
+      stepTimer = setInterval(tick, 1000);
+    }
+
+    function renderNutrition() {
+      const n = estimateNutrition(detailRecipe.ingredients);
+      document.getElementById('nutritionGrid').innerHTML =
+        '<div class="nutri-box"><b>' + n.cal + '</b><span>Calories</span></div>' +
+        '<div class="nutri-box"><b>' + n.pro + 'g</b><span>Protein</span></div>' +
+        '<div class="nutri-box"><b>' + n.carb + 'g</b><span>Carbs</span></div>' +
+        '<div class="nutri-box"><b>' + n.fat + 'g</b><span>Fat</span></div>' +
+        '<div class="nutri-box"><b>' + n.fib + 'g</b><span>Fibre</span></div>';
+    }
+    function renderSubs() {
+      const subs = findSubs(detailRecipe.ingredients);
+      document.getElementById('subList').innerHTML = subs.length
+        ? subs.map(s => '<div class="sub-row"><span style="font-weight:700">' + escapeHtml(s.from) + '</span><span class="sub-arrow">→</span><span><b>' + escapeHtml(s.to) + '</b> <span style="color:var(--muted)">(' + escapeHtml(s.qty) + ')</span><br><span style="font-size:.88rem;color:var(--muted)">' + escapeHtml(s.note) + '</span></span></div>').join('')
+        : '<p style="color:var(--muted)">No common substitutions needed — you have everything for this recipe.</p>';
+    }
+
+    // Servings + / -
+    document.getElementById('servMinus').addEventListener('click', () => {
+      if (detailServings <= 1) return;
+      detailServings--; renderIngredients(); renderNutrition();
+    });
+    document.getElementById('servPlus').addEventListener('click', () => {
+      detailServings++; renderIngredients(); renderNutrition();
+    });
+
+    // Step navigation
+    document.getElementById('stepPrev').addEventListener('click', () => {
+      if (currentStep > 0) { currentStep--; renderSteps(); scrollStep(); }
+    });
+    document.getElementById('stepNext').addEventListener('click', () => {
+      if (currentStep < (detailRecipe.steps || []).length - 1) { currentStep++; renderSteps(); scrollStep(); }
+    });
+    function scrollStep() {
+      const el = document.querySelector('#cookSteps .cook-step.current');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Save / share
+    function updateSaveBtn() {
+      const btn = document.getElementById('detailSaveBtn');
+      const saved = detailRecipe && getFavs().includes(detailRecipe.name);
+      btn.classList.toggle('saved', !!saved);
+      btn.textContent = saved ? '♥ Saved' : '♡ Save recipe';
+    }
+    document.getElementById('detailSaveBtn').addEventListener('click', () => {
+      if (!detailRecipe) return;
+      toggleFav(detailRecipe.name);
+      updateSaveBtn();
+      document.getElementById('shareStatus').textContent = getFavs().includes(detailRecipe.name) ? 'Saved to your favourites on this device. ♥' : 'Removed from favourites.';
+    });
+    document.getElementById('detailShareBtn').addEventListener('click', async () => {
+      if (!detailRecipe) return;
+      const status = document.getElementById('shareStatus');
+      const shareData = { title: 'Ruvia — ' + detailRecipe.name, text: detailRecipe.name + ' (' + (detailRecipe.time || '') + ') — made with Ruvia', url: location.href };
+      if (navigator.share) {
+        try { await navigator.share(shareData); status.textContent = 'Shared! 🎉'; return; }
+        catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      try {
+        await navigator.clipboard.writeText(location.href.split('#')[0] + '#recipe=' + encodeURIComponent(detailRecipe.name));
+        status.textContent = 'Link copied to clipboard! 🔗';
+      } catch (e) {
+        status.textContent = 'Could not copy link — please copy the address bar manually.';
+      }
+    });
+
+    // Back + openers (generated cards + recent cards)
+    document.getElementById('detailsBack').addEventListener('click', () => {
+      document.getElementById('detailsView').classList.remove('open');
+      document.getElementById('generatedHeading').scrollIntoView({ behavior: 'smooth' });
+    });
+    let lastGenerated = [];
+    const origRender = renderRecipes;
+    renderRecipes = function(recipes) {
+      lastGenerated = recipes || [];
+      origRender(recipes);
+      resultsEl.querySelectorAll('[data-open-recipe]').forEach(b => b.addEventListener('click', () => {
+        openRecipeDetails(lastGenerated[parseInt(b.dataset.openRecipe, 10)]);
+      }));
+    };
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-view-recent]');
+      if (!btn) return;
+      let recent = [];
+      try { recent = JSON.parse(localStorage.getItem('ruvia_recent') || '[]'); } catch (err) {}
+      const found = recent.find(r => r.name === btn.dataset.viewRecent);
+      if (found && found.ingredients && found.ingredients.length) openRecipeDetails(found);
+      else document.getElementById('generatedHeading').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    // Run everything when the page loads
+
+    // Run everything when the page loads
+
+    // ------------------------------------------------------------------
     // Run everything when the page loads
 
     // Run everything when the page loads
