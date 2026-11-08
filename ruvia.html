@@ -107,17 +107,111 @@
     footer b{color:var(--forest);font-family:'Fraunces',serif}
     @media (max-width:760px){ .hero-wrap{grid-template-columns:1fr} .hero-img{height:230px} .filters{grid-template-columns:1fr} .panel{padding:24px 18px;margin-top:-40px} .banner{padding:36px 16px 80px} button.get-recipes{min-width:100%} }
     @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
-</style>
+
+    /* ---------- Navbar ---------- */
+    .navbar{position:sticky;top:0;z-index:50;background:rgba(250,245,239,.88);backdrop-filter:blur(14px);border-bottom:1px solid #EFE3D2}
+    .nav-wrap{max-width:1160px;margin:0 auto;display:flex;align-items:center;gap:28px;padding:14px 20px}
+    .logo{display:flex;align-items:center;gap:9px;font-family:'Fraunces',serif;font-size:1.5rem;font-weight:700;color:var(--forest);text-decoration:none}
+    .logo-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--forest),var(--forest-2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:0 8px 20px rgba(27,67,50,.25)}
+    .nav-links{display:flex;gap:26px;margin-left:auto;align-items:center}
+    .nav-links a{color:var(--ink);text-decoration:none;font-weight:600;font-size:.95rem;position:relative;padding:6px 2px;transition:color .2s}
+    .nav-links a::after{content:"";position:absolute;left:0;bottom:0;width:0;height:2px;background:var(--terra);transition:width .25s ease;border-radius:2px}
+    .nav-links a:hover{color:var(--forest)} .nav-links a:hover::after{width:100%}
+    .nav-cta{background:var(--forest);color:#fff!important;padding:11px 22px;border-radius:999px;transition:all .2s}
+    .nav-cta:hover{background:var(--terra-dark);transform:translateY(-1px)} .nav-cta::after{display:none}
+    .nav-toggle{display:none;margin-left:auto;background:var(--forest);color:#fff;border:none;width:42px;height:42px;border-radius:12px;font-size:1.2rem;cursor:pointer}
+    /* ---------- Buttons / CTAs ---------- */
+    .btn-primary{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--forest),var(--forest-2));color:#fff;padding:15px 30px;border-radius:999px;font-weight:700;text-decoration:none;border:none;cursor:pointer;font-size:1rem;box-shadow:0 12px 28px rgba(27,67,50,.25);transition:all .2s;font-family:'Inter',sans-serif}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover);background:linear-gradient(135deg,var(--terra),var(--terra-dark))}
+    .btn-secondary{display:inline-flex;align-items:center;gap:8px;background:transparent;color:#fff;padding:14px 28px;border-radius:999px;font-weight:700;text-decoration:none;border:2px solid rgba(255,255,255,.55);transition:all .2s}
+    .btn-secondary:hover{background:rgba(255,255,255,.14);transform:translateY(-2px)}
+    .hero-ctas{display:flex;gap:14px;flex-wrap:wrap;margin-top:26px}
+    /* ---------- Sections ---------- */
+    .section{max-width:1160px;margin:0 auto;padding:64px 20px}
+    .section-head{text-align:center;max-width:640px;margin:0 auto 38px}
+    .section-head h2{font-size:clamp(1.9rem,4vw,2.6rem);color:var(--forest);margin-bottom:10px}
+    .section-head p{color:var(--muted);font-size:1.02rem}
+    .section-head .section-label{margin-bottom:10px}
+    .discover-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+    .dish-card{background:#fff;border-radius:var(--radius-lg);overflow:hidden;border:1px solid #F0E4D3;box-shadow:0 6px 24px rgba(48,40,32,.07);transition:transform .3s,box-shadow .3s;animation:fadeUp .55s ease both}
+    .dish-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-hover)}
+    .dish-img-wrap{position:relative;overflow:hidden}
+    .dish-img{width:100%;height:210px;object-fit:cover;transition:transform .6s}
+    .dish-card:hover .dish-img{transform:scale(1.07)}
+    .fav-btn{position:absolute;top:14px;right:14px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.92);font-size:1.05rem;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.18);transition:transform .18s}
+    .fav-btn:hover{transform:scale(1.12)} .fav-btn.active{background:var(--terra);color:#fff}
+    .cat-badge{position:absolute;left:14px;bottom:14px;background:var(--forest);color:#fff;font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:6px 11px;border-radius:999px}
+    .dish-body{padding:20px 20px 22px}
+    .dish-body h3{font-size:1.25rem;color:var(--forest);margin-bottom:8px}
+    .dish-meta{display:flex;gap:14px;color:var(--muted);font-size:.87rem;font-weight:600;flex-wrap:wrap}
+    .explore-link{display:inline-flex;align-items:center;gap:6px;margin-top:16px;color:var(--terra-dark);font-weight:700;text-decoration:none}
+    .explore-link:hover{gap:10px}
+    /* How it works */
+    .steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:24px;position:relative}
+    .step-card{background:#fff;border-radius:var(--radius-lg);padding:32px 26px;text-align:center;border:1px solid #F0E4D3;box-shadow:0 6px 24px rgba(48,40,32,.06);transition:transform .3s}
+    .step-card:hover{transform:translateY(-5px)}
+    .step-icon{width:64px;height:64px;margin:0 auto 16px;border-radius:20px;background:linear-gradient(135deg,var(--forest),var(--forest-2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 10px 24px rgba(27,67,50,.25)}
+    .step-card:nth-child(2) .step-icon{background:linear-gradient(135deg,var(--terra),var(--terra-dark))}
+    .step-num{font-size:.78rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--terra)}
+    .step-card h3{color:var(--forest);margin:6px 0 8px;font-size:1.25rem}
+    .step-card p{color:var(--muted);font-size:.95rem}
+    /* Selected ingredients */
+    .selected-wrap{margin-top:14px}
+    .selected-chips{display:flex;flex-wrap:wrap;gap:8px;min-height:38px}
+    .sel-chip{display:inline-flex;align-items:center;gap:7px;background:var(--forest);color:#fff;padding:8px 8px 8px 15px;border-radius:999px;font-size:.88rem;font-weight:600}
+    .sel-chip button{background:rgba(255,255,255,.2);color:#fff;border:none;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:.85rem;line-height:1}
+    .sel-chip button:hover{background:var(--terra)}
+    .clear-all{background:none;border:none;color:var(--terra-dark);font-weight:700;font-size:.85rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;margin-top:10px}
+    .empty-state{text-align:center;padding:44px 24px;background:#fff;border:2px dashed var(--sand);border-radius:var(--radius-lg);color:var(--muted)}
+    .empty-state .big{font-size:2.4rem;margin-bottom:10px}
+    .empty-state h3{color:var(--forest);font-size:1.3rem;margin-bottom:6px}
+    /* Footer */
+    .site-footer{background:var(--forest-dark);color:#D9E6DD;margin-top:20px}
+    .footer-wrap{max-width:1160px;margin:0 auto;padding:56px 20px 28px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:36px}
+    .footer-wrap h4{color:#fff;font-family:'Fraunces',serif;font-size:1.1rem;margin-bottom:14px}
+    .footer-wrap a{color:#B9CFC2;text-decoration:none;display:block;padding:5px 0;font-size:.93rem;transition:color .2s}
+    .footer-wrap a:hover{color:var(--sand)}
+    .footer-brand p{color:#B9CFC2;font-size:.93rem;max-width:32ch;margin-top:12px}
+    .footer-bottom{border-top:1px solid rgba(255,255,255,.12);text-align:center;padding:18px 20px;font-size:.85rem;color:#8FA89A}
+    .socials{display:flex;gap:10px;margin-top:16px}
+    .socials a{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:1rem}
+    .socials a:hover{background:var(--terra)}
+    @media (max-width:820px){
+      .nav-links{display:none;position:absolute;top:100%;left:0;right:0;background:var(--ivory);flex-direction:column;padding:18px 20px 22px;gap:14px;box-shadow:var(--shadow);border-top:1px solid #EFE3D2}
+      .nav-links.open{display:flex} .nav-toggle{display:block} .nav-cta{margin-top:4px;text-align:center}
+      .footer-wrap{grid-template-columns:1fr 1fr}
+    }
+
+  </style>
 </head>
 <body>
+
+  <!-- Premium navbar -->
+  <nav class="navbar" aria-label="Main navigation">
+    <div class="nav-wrap">
+      <a class="logo" href="#top"><span class="logo-mark">🥕</span> Ruvia</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">☰</button>
+      <div class="nav-links" id="navLinks">
+        <a href="#discover">Explore</a>
+        <a href="#recent">My Recipes</a>
+        <a href="#how">How it works</a>
+        <a href="#footer">Profile</a>
+        <a class="nav-cta" href="#create">Get Started</a>
+      </div>
+    </div>
+  </nav>
 
   <!-- Hero -->
   <header class="banner">
     <div class="hero-wrap">
       <div>
         <span class="eyebrow">Ruvia · Fridge to Recipe</span>
-        <h1>Cook beautifully with <em>what you have.</em></h1>
-        <p class="subtitle">Tell us what's in your fridge. Ruvia turns simple ingredients into elegant, home-cooked recipes — in seconds.</p>
+        <h1>Create something delicious with <em>what you have.</em></h1>
+        <p class="subtitle">Turn everyday ingredients into extraordinary meals. Discover delicious recipes with the ingredients already in your kitchen.</p>
+        <div class="hero-ctas">
+          <a class="btn-primary" href="#create" id="heroDiscover">✨ Discover Recipes</a>
+          <a class="btn-secondary" href="#discover">Explore Dishes</a>
+        </div>
         <div class="hero-meta">
           <span class="hero-badge">✨ <b>Free AI</b> · no key needed</span>
           <span class="hero-badge">⏱ <b>10–20 sec</b> per recipe</span>
@@ -129,14 +223,18 @@
   </header>
 
   <!-- White rounded panel -->
-  <div class="panel">
+  <main class="panel" id="create">
     <!-- Input section -->
     <div class="input-section">
       <div class="section-label">Start with your fridge</div>
       <label for="ingredientInput">What's in your fridge?</label>
       <textarea id="ingredientInput" placeholder="e.g. eggs, tomatoes, onion, rice"></textarea>
+      <div class="selected-wrap">
+        <div class="selected-chips" id="selectedChips"></div>
+        <button type="button" class="clear-all" id="clearAllBtn">Clear all ingredients</button>
+      </div>
 
-      <div class="chips-label">Quick add</div>
+      <div class="chips-label">Suggested ingredients — tap to add:</div>
       <div class="chips" id="chipsContainer"></div>
     </div>
 
@@ -225,13 +323,61 @@
     <!-- Error box -->
     <div id="errorBox" class="error-box"></div>
 
-    <!-- Results heading and grid -->
-    <div class="results-heading">Popular Recipes</div>
+    <!-- Generated results -->
+    <div class="results-heading" id="generatedHeading">Your recipes</div>
     <div id="results"></div>
-  </div>
+  </main>
 
-  <footer>
-    <b>Ruvia</b> · Made with AI 🍳
+  <!-- Popular / trending -->
+  <section class="section" id="discover">
+    <div class="section-head">
+      <div class="section-label">Trending now</div>
+      <h2>Discover Something Delicious</h2>
+      <p>Explore dishes loved by food enthusiasts.</p>
+    </div>
+    <div class="discover-grid" id="popularGrid"></div>
+    <div style="text-align:center;margin-top:28px">
+      <a class="explore-link" href="#create">Explore all recipes →</a>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="section" id="how" style="background:#fff;border-top:1px solid #F0E4D3;border-bottom:1px solid #F0E4D3">
+    <div class="section-head">
+      <div class="section-label">Simple by design</div>
+      <h2>How Ruvia Works</h2>
+      <p>Three simple steps to dinner.</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card"><div class="step-icon">🥕</div><div class="step-num">Step 1</div><h3>Add Your Ingredients</h3><p>Tell Ruvia what ingredients you have in your kitchen.</p></div>
+      <div class="step-card"><div class="step-icon">✨</div><div class="step-num">Step 2</div><h3>Discover Recipes</h3><p>Let Ruvia find creative and delicious recipes for you.</p></div>
+      <div class="step-card"><div class="step-icon">🍳</div><div class="step-num">Step 3</div><h3>Start Cooking</h3><p>Follow simple instructions and turn your ingredients into something amazing.</p></div>
+    </div>
+  </section>
+
+  <!-- Recently generated (real user data) -->
+  <section class="section" id="recent">
+    <div class="section-head">
+      <div class="section-label">Your kitchen</div>
+      <h2>Recently Generated Recipes</h2>
+      <p>Dishes you created with Ruvia, saved on this device.</p>
+    </div>
+    <div id="recentWrap"></div>
+  </section>
+
+  <!-- Premium footer -->
+  <footer class="site-footer" id="footer">
+    <div class="footer-wrap">
+      <div class="footer-brand">
+        <a class="logo" href="#top" style="color:#fff"><span class="logo-mark">🥕</span> Ruvia</a>
+        <p>A premium cooking experience that turns everyday ingredients into extraordinary meals.</p>
+        <div class="socials"><a href="#top" aria-label="Instagram">◎</a><a href="#top" aria-label="YouTube">▶</a><a href="#top" aria-label="Pinterest">P</a></div>
+      </div>
+      <div><h4>Explore</h4><a href="#discover">Discover Recipes</a><a href="#discover">Popular Dishes</a><a href="#how">How it works</a></div>
+      <div><h4>My Account</h4><a href="#recent">My Recipes</a><a href="#create">Create Recipe</a><a href="#footer">Profile</a></div>
+      <div><h4>Support</h4><a href="#footer">About Us</a><a href="#footer">Contact</a><a href="#footer">Help</a></div>
+    </div>
+    <div class="footer-bottom">© 2026 Ruvia · Made with AI 🍳 · Free AI, no key needed</div>
   </footer>
 
   <script>
@@ -637,6 +783,8 @@ Assume the user already has salt, oil, water and basic spices.
 
         resultsEl.appendChild(card);
       });
+      // Save to 'Recently Generated' (real data, this device only)
+      try { saveRecent(recipes); } catch (e) { /* storage blocked */ }
     }
 
     // ------------------------------------------------------------------
@@ -718,9 +866,139 @@ Assume the user already has salt, oil, water and basic spices.
       spiceFilter.value = selectedSpice;
     }
 
+    // ------------------------------------------------------------------
+    // HOMEPAGE: selected chips, clear all, favourites, recent, nav
+    // ------------------------------------------------------------------
+    // Selected ingredient chips (removable) synced with the textarea
+    function getIngredientList() {
+      return ingredientsText.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    function renderSelectedChips() {
+      const wrap = document.getElementById('selectedChips');
+      if (!wrap) return;
+      const list = getIngredientList();
+      if (!list.length) { wrap.innerHTML = '<span style="color:#6B5D4F;font-size:.88rem">No ingredients yet — tap a suggestion or type above.</span>'; return; }
+      wrap.innerHTML = '';
+      list.forEach(item => {
+        const chip = document.createElement('span');
+        chip.className = 'sel-chip';
+        chip.innerHTML = escapeHtml(item) + ' <button type="button" aria-label="Remove ' + escapeHtml(item) + '">×</button>';
+        chip.querySelector('button').addEventListener('click', () => {
+          const rest = getIngredientList().filter(x => x.toLowerCase() !== item.toLowerCase());
+          ingredientInput.value = rest.join(', ');
+          ingredientsText = rest.join(', ');
+          renderSelectedChips();
+        });
+        wrap.appendChild(chip);
+      });
+    }
+    ingredientInput.addEventListener('input', renderSelectedChips);
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
+      ingredientInput.value = ''; ingredientsText = ''; renderSelectedChips(); ingredientInput.focus();
+    });
+
+    // Favourites (saved on this device only)
+    function getFavs() { try { return JSON.parse(localStorage.getItem('ruvia_favs') || '[]'); } catch (e) { return []; } }
+    function toggleFav(name, btn) {
+      let favs = getFavs();
+      const i = favs.indexOf(name);
+      if (i >= 0) favs.splice(i, 1); else favs.push(name);
+      try { localStorage.setItem('ruvia_favs', JSON.stringify(favs)); } catch (e) {}
+      document.querySelectorAll('[data-fav="' + CSS.escape(name) + '"]').forEach(b => {
+        b.classList.toggle('active', favs.includes(name));
+        b.textContent = favs.includes(name) ? '♥' : '♡';
+        b.setAttribute('aria-pressed', favs.includes(name) ? 'true' : 'false');
+      });
+    }
+    function favButton(name) {
+      const active = getFavs().includes(name);
+      return '<button type="button" class="fav-btn' + (active ? ' active' : '') + '" data-fav="' + escapeHtml(name) + '" aria-pressed="' + active + '" aria-label="Save ' + escapeHtml(name) + ' to favourites">' + (active ? '♥' : '♡') + '</button>';
+    }
+
+    // Popular / trending dishes (curated, with real photos)
+    const popularDishes = [
+      { name: 'Creamy Tomato Pasta', time: '25 min', level: 'Easy', cat: 'Italian', img: 'https://images.unsplash.com/photo-1563379926898-05f4575a45d8?auto=format&fit=crop&w=800&q=80' },
+      { name: 'Golden Fried Rice', time: '20 min', level: 'Easy', cat: 'Chinese', img: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80' },
+      { name: 'Masala Paneer Skillet', time: '30 min', level: 'Medium', cat: 'North Indian', img: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=800&q=80' },
+      { name: 'Fluffy Veggie Omelette', time: '15 min', level: 'Easy', cat: 'Breakfast', img: 'https://images.unsplash.com/photo-1510693206972-df098062cb71?auto=format&fit=crop&w=800&q=80' },
+      { name: 'Garden Buddha Bowl', time: '20 min', level: 'Easy', cat: 'Healthy', img: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80' },
+      { name: 'Rustic Potato Soup', time: '35 min', level: 'Medium', cat: 'Comfort', img: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80' }
+    ];
+    function renderPopular() {
+      const grid = document.getElementById('popularGrid');
+      if (!grid) return;
+      grid.innerHTML = popularDishes.map(d => `
+        <article class="dish-card">
+          <div class="dish-img-wrap">
+            <img class="dish-img" src="${d.img}" alt="${escapeHtml(d.name)}" loading="lazy" />
+            <span class="cat-badge">${escapeHtml(d.cat)}</span>
+            ${favButton(d.name)}
+          </div>
+          <div class="dish-body">
+            <h3>${escapeHtml(d.name)}</h3>
+            <div class="dish-meta"><span>⏱ ${d.time}</span><span>📊 ${d.level}</span><span>🍳 ${d.cat}</span></div>
+            <a class="explore-link" href="#create">Cook this →</a>
+          </div>
+        </article>`).join('');
+      grid.querySelectorAll('[data-fav]').forEach(b => b.addEventListener('click', () => toggleFav(b.dataset.fav, b)));
+    }
+
+    // Recently generated — REAL data from this device (localStorage)
+    function saveRecent(recipes) {
+      let recent = [];
+      try { recent = JSON.parse(localStorage.getItem('ruvia_recent') || '[]'); } catch (e) {}
+      (recipes || []).forEach(r => {
+        if (!r || !r.name) return;
+        recent = recent.filter(x => x.name !== r.name);
+        recent.unshift({ name: r.name, time: r.time || '—', style: r.style || 'Any', at: Date.now() });
+      });
+      recent = recent.slice(0, 9);
+      try { localStorage.setItem('ruvia_recent', JSON.stringify(recent)); } catch (e) {}
+      renderRecent();
+    }
+    function renderRecent() {
+      const wrap = document.getElementById('recentWrap');
+      if (!wrap) return;
+      let recent = [];
+      try { recent = JSON.parse(localStorage.getItem('ruvia_recent') || '[]'); } catch (e) {}
+      if (!recent.length) {
+        wrap.innerHTML = '<div class="empty-state"><div class="big">🥕</div><h3>No recipes yet</h3><p>Generate your first recipes above and they will appear here.<br>Explore dishes loved by food enthusiasts.</p><p style="margin-top:14px"><a class="btn-primary" href="#create" style="display:inline-flex">✨ Create your first recipe</a></p></div>';
+        return;
+      }
+      const imgs = popularDishes.map(d => d.img);
+      wrap.innerHTML = '<div class="discover-grid">' + recent.map((r, i) => `
+        <article class="dish-card">
+          <div class="dish-img-wrap">
+            <img class="dish-img" src="${imgs[i % imgs.length]}" alt="${escapeHtml(r.name)}" loading="lazy" />
+            <span class="cat-badge">${escapeHtml(r.style || 'Recipe')}</span>
+            ${favButton(r.name)}
+          </div>
+          <div class="dish-body"><h3>${escapeHtml(r.name)}</h3>
+          <div class="dish-meta"><span>⏱ ${escapeHtml(r.time)}</span></div>
+          <a class="explore-link" href="#generatedHeading">View full recipe →</a></div>
+        </article>`).join('') + '</div>';
+      wrap.querySelectorAll('[data-fav]').forEach(b => b.addEventListener('click', () => toggleFav(b.dataset.fav, b)));
+    }
+
+    // Mobile nav + hero CTA focus
+    const navToggle = document.getElementById('navToggle');
+    const navLinks = document.getElementById('navLinks');
+    navToggle.addEventListener('click', () => {
+      const open = navLinks.classList.toggle('open');
+      navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      navToggle.textContent = open ? '✕' : '☰';
+    });
+    navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { navLinks.classList.remove('open'); navToggle.textContent = '☰'; }));
+    document.getElementById('heroDiscover').addEventListener('click', () => setTimeout(() => ingredientInput.focus(), 500));
+
+    // Run everything when the page loads
+
     // Run everything when the page loads
     renderChips();
     initFilterButtons();
+    renderSelectedChips();
+    renderPopular();
+    renderRecent();
 
   </script>
 
