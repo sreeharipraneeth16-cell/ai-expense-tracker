@@ -780,16 +780,15 @@ Assume the user already has salt, oil, water and basic spices.
           ? data.candidates[0].content.parts[0].text
           : '';
 
-        // Parse the JSON from the AI
-        let recipes;
-        try {
-          recipes = JSON.parse(text).recipes;
-        } catch (parseErr) {
-          // If pure JSON didn't work, try to find a JSON block inside the text
+        // Parse the JSON from the AI (forgiving: strips fences, fixes trailing commas)
+        let recipes = null;
+        try { recipes = JSON.parse(text).recipes; } catch (e) {}
+        if (!recipes && typeof parseRecipesSafe === 'function') recipes = parseRecipesSafe(text);
+        if (!recipes) {
           const match = text.match(/\{[\s\S]*\}/);
-          if (!match) throw new Error('Could not understand the API response.');
-          recipes = JSON.parse(match[0]).recipes;
+          if (match) { try { recipes = JSON.parse(match[0]).recipes; } catch (e) {} }
         }
+        if (!recipes) throw new Error('Could not understand the API response.');
 
         // Show the recipes on the page
         renderRecipes(recipes);
@@ -1428,6 +1427,33 @@ Assume the user already has salt, oil, water and basic spices.
   <script>
     // Free AI handler: uses Pollinations POST, no key, good quality.
     // POST is better than GET for long prompts (no URL length limit).
+    // Forgiving JSON parser for the free AI (it sometimes adds extra words,
+    // markdown fences, or trailing commas). Tries several cleanups, then
+    // extracts just the recipes array. Returns null if it truly cannot parse.
+    function parseRecipesSafe(text) {
+      if (!text) return null;
+      let t = String(text).trim();
+      t = t.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const candidates = [];
+      try { candidates.push(JSON.parse(t)); } catch (e) {}
+      const m = t.match(/\{[\s\S]*\}/);
+      if (m) { try { candidates.push(JSON.parse(m[0])); } catch (e) {} }
+      // Fix trailing commas like {"a":1,} which break JSON.parse
+      const fixed = t.replace(/,\s*([}\]])/g, '$1');
+      try { candidates.push(JSON.parse(fixed)); } catch (e) {}
+      if (m) { try { candidates.push(JSON.parse(m[0].replace(/,\s*([}\]])/g, '$1'))); } catch (e) {} }
+      // Last resort: pull out just the "recipes": [...] array
+      const arr = t.match(/"recipes"\s*:\s*(\[[\s\S]*\])/);
+      if (arr) {
+        try { candidates.push({ recipes: JSON.parse(arr[1]) }); } catch (e) {}
+        try { candidates.push({ recipes: JSON.parse(arr[1].replace(/,\s*([}\]])/g, '$1')) }); } catch (e) {}
+      }
+      for (const c of candidates) {
+        if (c && Array.isArray(c.recipes) && c.recipes.length) return c.recipes;
+      }
+      return null;
+    }
+
     async function getFreeRecipes() {
       const input = document.getElementById('ingredientInput');
       if (!input.value.trim()) { showError('Please enter some ingredients first.'); return; }
@@ -1439,12 +1465,9 @@ Assume the user already has salt, oil, water and basic spices.
       if (mainLabel) mainLabel.textContent = '✨ Thinking... (10–20 seconds)';
       errorBox.style.display = 'none';
       resultsEl.innerHTML = '';
-      // Stop waiting after 90 seconds so the page never hangs forever.
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 90000);
       try {
-        // Keep the prompt SHORT for the free model.
-        // The long Gemini prompt makes the free model run out of tokens and fail.
         const ingredients = input.value.trim();
         const filters = [
           selectedDiet !== 'Any' ? 'diet ' + selectedDiet : '',
@@ -1454,36 +1477,40 @@ Assume the user already has salt, oil, water and basic spices.
           selectedSpice !== 'Any' ? selectedSpice : '',
           selectedMeal !== 'Any' ? selectedMeal : ''
         ].filter(Boolean).join(', ');
+        // Short prompt, no long JSON example (the example confuses the free model).
         const prompt = "Give 3 easy recipes using: " + ingredients +
           (filters ? ". Filters: " + filters : "") +
           ". User has salt, oil, water. " +
-          'Reply ONLY JSON: {"recipes":[{"name":"Soup","time":"20 min","style":"Boil","ingredients":[{"item":"tomato","quantity":"200 g","have":true}],"steps":["Boil water.","Add tomato.","Cook 15 min."]}]} ' +
-          "Keep steps short (2-3 steps per recipe).";
-        const res = await fetch('https://text.pollinations.ai/openai', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            model: 'openai',
-            messages: [
-              { role: 'system', content: 'You are a cooking assistant. Reply with ONLY valid JSON, no markdown.' },
-              { role: 'user', content: prompt }
-            ]
-          })
-        });
-        clearTimeout(timer);
-        if (!res.ok) throw new Error('Free AI is busy (HTTP ' + res.status + '). Please try again in a minute.');
-        const data = await res.json();
-        // Pollinations returns OpenAI format: choices[0].message.content
-        const text = data.choices && data.choices[0] && data.choices[0].message
-          ? data.choices[0].message.content : '';
-        let recipes;
-        try { recipes = JSON.parse(text).recipes; }
-        catch (e) {
-          const m = text.match(/\{[\s\S]*\}/);
-          if (!m) throw new Error('Could not understand the Free AI answer. Please try again.');
-          recipes = JSON.parse(m[0]).recipes;
+          "Reply with ONLY valid JSON and nothing else. " +
+          "Keys per recipe: name, time, style, ingredients (each with item, quantity, have), steps (2 short steps). " +
+          "No extra fields, no markdown, no explanation.";
+        let recipes = null;
+        let lastText = '';
+        // Try twice: the free model sometimes returns broken JSON the first time.
+        for (let attempt = 1; attempt <= 2 && !recipes; attempt++) {
+          if (attempt > 1 && mainLabel) mainLabel.textContent = '✨ Answer was messy, trying again...';
+          const res = await fetch('https://text.pollinations.ai/openai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              model: 'openai',
+              temperature: 0.2,
+              messages: [
+                { role: 'system', content: 'You output only valid JSON.' },
+                { role: 'user', content: prompt }
+              ]
+            })
+          });
+          if (!res.ok) throw new Error('Free AI is busy (HTTP ' + res.status + '). Please try again in a minute.');
+          const data = await res.json();
+          const text = data.choices && data.choices[0] && data.choices[0].message
+            ? data.choices[0].message.content : '';
+          lastText = text;
+          recipes = parseRecipesSafe(text);
         }
+        clearTimeout(timer);
+        if (!recipes) throw new Error('Could not understand the Free AI answer (it gave messy data twice). Please try again — shorter ingredient list helps.');
         renderRecipes(recipes);
       } catch (err) {
         clearTimeout(timer);
