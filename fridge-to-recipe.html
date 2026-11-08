@@ -7,7 +7,7 @@
   <style>
     /* =========================================================
        Fridge to Recipe - Beginner-friendly single-file app
-       Colors: #f4f7f2 light bg, green & orange gradient accents
+       Colors: #FAF5EF light bg, green & orange gradient accents
        ========================================================= */
     * {
       box-sizing: border-box;
@@ -18,14 +18,14 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: #FAF5EF; /* warm cream background */
-      color: #1b5e20;      /* dark green text */
+      color: #302820;      /* dark green text */
       line-height: 1.5;
       min-height: 100vh;
     }
 
     /* Banner with green-to-orange gradient */
     .banner {
-      background: linear-gradient(135deg, #4caf50, #fb8c00);
+      background: linear-gradient(135deg, #C96B45, #C96B45);
       color: #ffffff;
       padding: 30px 16px 16px;
       position: relative;
@@ -62,7 +62,7 @@
     label {
       display: block;
       font-weight: 600;
-      color: #2e7d32;
+      color: #C96B45;
       margin-bottom: 8px;
       font-size: 0.95rem;
     }
@@ -72,19 +72,19 @@
       height: 100px;
       padding: 12px 14px;
       font-size: 1rem;
-      border: 2px solid #a5d6a7;
+      border: 2px solid #C96B45;
       border-radius: 10px;
       outline: none;
       resize: vertical;
       font-family: inherit;
     }
 
-    textarea:focus { border-color: #4caf50; }
+    textarea:focus { border-color: #C96B45; }
 
     /* Quick-add chips */
     .chips-label {
       font-size: 0.85rem;
-      color: #558b2f;
+      color: #C96B45;
       margin: 14px 0 8px;
     }
 
@@ -95,9 +95,9 @@
     }
 
     .chip {
-      background: #e8f5e9;
-      color: #1b5e20;
-      border: 1px solid #c8e6c9;
+      background: #E9D8C5;
+      color: #302820;
+      border: 1px solid #E9D8C5;
       border-radius: 20px;
       padding: 6px 14px;
       font-size: 0.85rem;
@@ -105,7 +105,7 @@
       transition: all 0.2s;
     }
 
-    .chip:hover { background: #c8e6c9; }
+    .chip:hover { background: #E9D8C5; }
 
     /* ================= Filters grid ================= */
     .filters {
@@ -124,7 +124,7 @@
     .filter-group label {
       font-size: 0.85rem;
       font-weight: 600;
-      color: #33691e;
+      color: #302820;
     }
 
     .btn-group {
@@ -135,8 +135,8 @@
 
     .filter-btn {
       background: #ffffff;
-      border: 2px solid #a5d6a7;
-      color: #2e7d32;
+      border: 2px solid #C96B45;
+      color: #C96B45;
       padding: 8px 14px;
       border-radius: 10px;
       font-size: 0.9rem;
@@ -144,26 +144,26 @@
       transition: all 0.2s;
     }
 
-    .filter-btn:hover { background: #e8f5e9; }
+    .filter-btn:hover { background: #E9D8C5; }
 
     .filter-btn.active {
-      background: #4caf50;
+      background: #C96B45;
       color: #ffffff;
-      border-color: #4caf50;
+      border-color: #C96B45;
     }
 
     select {
       padding: 10px 14px;
-      border: 2px solid #a5d6a7;
+      border: 2px solid #C96B45;
       border-radius: 10px;
       font-size: 0.95rem;
       background: #ffffff;
-      color: #1b5e20;
+      color: #302820;
       cursor: pointer;
       outline: none;
     }
 
-    select:focus { border-color: #4caf50; }
+    select:focus { border-color: #C96B45; }
 
     /* ================= Get recipes button ================= */
     .actions {
@@ -175,7 +175,7 @@
       padding: 16px 36px;
       font-size: 1.1rem;
       font-weight: 700;
-      background: linear-gradient(135deg, #4caf50, #fb8c00);
+      background: linear-gradient(135deg, #C96B45, #C96B45);
       color: #ffffff;
       border: none;
       border-radius: 14px;
@@ -194,19 +194,19 @@
     }
 
     button.get-recipes:disabled {
-      background: #a5d6a7;
+      background: #E9D8C5;
       box-shadow: none;
       cursor: not-allowed;
       opacity: 0.85;
     }
 
     button.get-recipes.local-btn {
-      background: linear-gradient(135deg, #558b2f, #33691e);
+      background: linear-gradient(135deg, #C96B45, #302820);
       box-shadow: 0 8px 24px rgba(85, 139, 47, 0.35);
       margin-top: 12px;
     }
 
-    .small-note { font-size: 0.85rem; color: #558b2f; margin: 10px 0 0; }
+    .small-note { font-size: 0.85rem; color: #C96B45; margin: 10px 0 0; }
 
     /* Loading spinner */
     .loading {
@@ -243,7 +243,7 @@
     .results-heading {
       font-size: 1.25rem;
       font-weight: 800;
-      color: #1b5e20;
+      color: #302820;
       margin-bottom: 16px;
       padding: 0 4px;
     }
@@ -260,7 +260,7 @@
       border-radius: 16px;
       overflow: hidden;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      border: 1px solid #c8e6c9;
+      border: 1px solid #E9D8C5;
       animation: fadeIn 0.6s ease-out;
       display: flex;
       flex-direction: column;
@@ -272,8 +272,8 @@
     }
 
     /* Colored gradient headers: green, orange, red */
-    .card:nth-child(1) .card-header { background: linear-gradient(135deg, #4caf50, #2e7d32); }
-    .card:nth-child(2) .card-header { background: linear-gradient(135deg, #fb8c00, #e65100); }
+    .card:nth-child(1) .card-header { background: linear-gradient(135deg, #C96B45, #C96B45); }
+    .card:nth-child(2) .card-header { background: linear-gradient(135deg, #C96B45, #302820); }
     .card:nth-child(3) .card-header { background: linear-gradient(135deg, #e53935, #b71c1c); }
 
     .card-header {
@@ -307,13 +307,13 @@
     /* Ingredients list */
     .ingredients-section {
       padding: 16px;
-      border-bottom: 1px solid #e8f5e9;
+      border-bottom: 1px solid #E9D8C5;
     }
 
     .ingredients-section h3 {
       margin: 0 0 10px;
       font-size: 1rem;
-      color: #2e7d32;
+      color: #C96B45;
     }
 
     .ingredients-list {
@@ -335,13 +335,13 @@
     }
 
     .ingredient-row.have {
-      background: #e8f5e9;
-      color: #1b5e20;
+      background: #E9D8C5;
+      color: #302820;
     }
 
     .ingredient-row.missing {
-      background: #fff3e0;
-      color: #e65100;
+      background: #E9D8C5;
+      color: #302820;
     }
 
     .ingredient-row .item {
@@ -365,7 +365,7 @@
     .steps-section h3 {
       margin: 0 0 12px;
       font-size: 1rem;
-      color: #2e7d32;
+      color: #C96B45;
     }
 
     .steps-list {
@@ -386,7 +386,7 @@
     .step-number {
       width: 26px;
       height: 26px;
-      background: #4caf50;
+      background: #C96B45;
       color: #ffffff;
       border-radius: 50%;
       display: flex;
@@ -398,7 +398,7 @@
     }
 
     .step-text {
-      color: #1b5e20;
+      color: #302820;
       font-size: 0.95rem;
     }
 
@@ -407,7 +407,7 @@
       text-align: center;
       padding: 30px 0;
       font-size: 0.85rem;
-      color: #689f38;
+      color: #C96B45;
     }
 
     /* ================= Responsive ================= */
@@ -865,14 +865,14 @@ Assume the user already has salt, oil, water and basic spices.
       resultsEl.innerHTML = '';
 
       if (!recipes || recipes.length === 0) {
-        resultsEl.innerHTML = '<p style="text-align:center; color:#558b2f;">No recipes found. Try different ingredients or filters.</p>';
+        resultsEl.innerHTML = '<p style="text-align:center; color:#C96B45;">No recipes found. Try different ingredients or filters.</p>';
         return;
       }
 
       // Three different gradient colors for the three cards
       const gradientThemes = [
-        'linear-gradient(135deg, #4caf50, #2e7d32)',
-        'linear-gradient(135deg, #fb8c00, #e65100)',
+        'linear-gradient(135deg, #C96B45, #C96B45)',
+        'linear-gradient(135deg, #C96B45, #302820)',
         'linear-gradient(135deg, #e53935, #b71c1c)'
       ];
 
@@ -904,7 +904,7 @@ Assume the user already has salt, oil, water and basic spices.
         card.style.background = gradientThemes[index % 3] + '; color: #ffffff;';
         // But we want the body white, so we only color the header. Reset body:
         card.style.background = '#ffffff';
-        card.style.color = '#1b5e20';
+        card.style.color = '#302820';
 
         card.innerHTML = `
           <div class="card-header" style="background: ${gradientThemes[index % 3]};">
