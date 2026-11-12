@@ -371,7 +371,7 @@
           Cooking up ideas...
         </span>
       </button>
-      <p class="small-note">Free AI uses pollinations.ai online (no account, no key). Your ingredients are sent there. Takes 10–20 seconds.</p>
+      <p class="small-note">Free AI uses pollinations.ai online (no account, no key). One request every ~45 seconds; your ingredients are sent there. Takes 10–20 seconds.</p>
       <br />
       <!-- Hidden: kept so old code that clicks it still works. The top button now does the same thing. -->
       <button type="button" class="get-recipes local-btn" id="freeAiBtn" style="display:none;">
@@ -1511,6 +1511,32 @@ Assume the user already has salt, oil, water and basic spices.
       return null;
     }
 
+    // Pollinations free tier allows about 1 reply every 45 seconds per IP.
+    // Respect it with a visible countdown instead of hammering the API.
+    const FREE_AI_COOLDOWN_SECONDS = 45;
+
+    function startFreeAiCooldown(seconds) {
+      const mainBtn = document.getElementById('getRecipesBtn');
+      const mainLabel = document.getElementById('btnText');
+      if (!mainBtn || !mainLabel) return;
+      let left = Math.max(1, Math.round(seconds));
+      mainBtn.disabled = true;
+      const render = function () {
+        mainLabel.textContent = '⏳ Free AI cooling down — ' + left + 's';
+      };
+      render();
+      const tick = setInterval(function () {
+        left--;
+        if (left <= 0) {
+          clearInterval(tick);
+          mainBtn.disabled = false;
+          mainLabel.textContent = '✨ Get recipes — Free AI, no key needed';
+        } else {
+          render();
+        }
+      }, 1000);
+    }
+
     async function getFreeRecipes() {
       const input = document.getElementById('ingredientInput');
       if (!input.value.trim()) { showError('Please enter some ingredients first.'); return; }
@@ -1523,9 +1549,9 @@ Assume the user already has salt, oil, water and basic spices.
       label.textContent = '✨ Thinking...';
       if (mainLabel) mainLabel.textContent = '✨ Thinking... (10–20 seconds)';
       errorBox.style.display = 'none';
-      resultsEl.innerHTML = '';
+      // Keep old results on screen until new ones arrive.
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 90000);
+      const timer = setTimeout(function () { controller.abort(); }, 90000);
       try {
         const ingredients = input.value.trim();
         const filters = [
@@ -1543,46 +1569,108 @@ Assume the user already has salt, oil, water and basic spices.
           "Reply with ONLY valid JSON and nothing else. " +
           "Keys per recipe: name, time, style, ingredients (each with item, quantity, have), steps (2 short steps). " +
           "No extra fields, no markdown, no explanation.";
+
+        function rateLimitError(seconds) {
+          const e = new Error('Free AI allows about one request every 45 seconds to stay free for everyone.');
+          e.cooldown = true;
+          e.wait = seconds || FREE_AI_COOLDOWN_SECONDS;
+          return e;
+        }
+
+        // Ask the free AI for text. Try the normal POST route first,
+        // then a simple GET route in case POST is blocked on this network.
+        async function askFreeAI() {
+          let res = null;
+          try {
+            res = await fetch('https://text.pollinations.ai/openai', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: controller.signal,
+              body: JSON.stringify({
+                model: 'openai',
+                temperature: 0.2,
+                messages: [
+                  { role: 'system', content: 'You output only valid JSON.' },
+                  { role: 'user', content: prompt }
+                ]
+              })
+            });
+          } catch (e) {
+            if (e && e.name === 'AbortError') throw e;
+            console.warn('Free AI POST blocked, trying GET route.', e);
+            res = null;
+          }
+
+          if (res) {
+            if (res.status === 402 || res.status === 429) {
+              let body = '';
+              try { body = await res.text(); } catch (e) {}
+              const m = String(body).match(/wait\s+(\d+)\s*second/i);
+              throw rateLimitError(m ? parseInt(m[1], 10) : FREE_AI_COOLDOWN_SECONDS);
+            }
+            if (res.ok) {
+              const data = await res.json();
+              const text = data.choices && data.choices[0] && data.choices[0].message
+                ? data.choices[0].message.content : '';
+              if (text) return text;
+            }
+            console.warn('Free AI POST failed, trying GET route. HTTP ' + res.status);
+          }
+
+          // Fallback: simple GET endpoint returns the answer as plain text.
+          const getRes = await fetch(
+            'https://text.pollinations.ai/' + encodeURIComponent(prompt) + '?model=openai',
+            { signal: controller.signal }
+          );
+          if (getRes.status === 402 || getRes.status === 429) {
+            let body = '';
+            try { body = await getRes.text(); } catch (e) {}
+            const m = String(body).match(/wait\s+(\d+)\s*second/i);
+            throw rateLimitError(m ? parseInt(m[1], 10) : FREE_AI_COOLDOWN_SECONDS);
+          }
+          if (!getRes.ok) {
+            throw new Error('Free AI is busy (HTTP ' + getRes.status + '). Please try again in a minute.');
+          }
+          return await getRes.text();
+        }
+
         let recipes = null;
-        let lastText = '';
         // Try twice: the free model sometimes returns broken JSON the first time.
         for (let attempt = 1; attempt <= 2 && !recipes; attempt++) {
           if (attempt > 1 && mainLabel) mainLabel.textContent = '✨ Answer was messy, trying again...';
-          const res = await fetch('https://text.pollinations.ai/openai', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-            body: JSON.stringify({
-              model: 'openai',
-              temperature: 0.2,
-              messages: [
-                { role: 'system', content: 'You output only valid JSON.' },
-                { role: 'user', content: prompt }
-              ]
-            })
-          });
-          if (!res.ok) throw new Error('Free AI is busy (HTTP ' + res.status + '). Please try again in a minute.');
-          const data = await res.json();
-          const text = data.choices && data.choices[0] && data.choices[0].message
-            ? data.choices[0].message.content : '';
-          lastText = text;
+          const text = await askFreeAI();
           recipes = parseRecipesSafe(text);
         }
         clearTimeout(timer);
         if (!recipes) throw new Error('Could not understand the Free AI answer (it gave messy data twice). Please try again — shorter ingredient list helps.');
         renderRecipes(recipes);
+        // Politely pause for the next free request.
+        startFreeAiCooldown(FREE_AI_COOLDOWN_SECONDS);
       } catch (err) {
         clearTimeout(timer);
         console.error(err);
-        const msg = (err && err.name === 'AbortError')
-          ? 'Free AI took too long (90 seconds). Please try again.'
-          : (err.message || 'Please try again.');
+        let msg;
+        if (err && err.name === 'AbortError') {
+          msg = 'Free AI took too long (90 seconds). Please try again.';
+        } else if (err && err.cooldown) {
+          msg = 'Free AI allows about one request every 45 seconds so it stays free for everyone. Please wait a moment, then tap again.';
+        } else if (err && /Failed to fetch|Load failed|NetworkError/i.test(err.message || '')) {
+          msg = 'Could not reach the free AI service. Check your internet connection, turn off any ad-blocker, then try again.';
+        } else {
+          msg = (err && err.message) || 'Please try again.';
+        }
         showError("We couldn't get recipes from Free AI.\n" + msg);
+        if (err && err.cooldown) {
+          startFreeAiCooldown(err.wait || FREE_AI_COOLDOWN_SECONDS);
+        } else if (mainBtn) {
+          mainBtn.disabled = false;
+        }
       } finally {
         btn.disabled = false;
-        if (mainBtn) mainBtn.disabled = false;
         label.textContent = '✨ Free AI — no key needed';
-        if (mainLabel) mainLabel.textContent = '✨ Get recipes — Free AI, no key needed';
+        if (mainBtn && !mainBtn.disabled && mainLabel) {
+          mainLabel.textContent = '✨ Get recipes — Free AI, no key needed';
+        }
       }
     }
     document.getElementById('freeAiBtn').addEventListener('click', getFreeRecipes);
