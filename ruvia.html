@@ -1586,7 +1586,16 @@ Assume the user already has salt, oil, water and basic spices.
       const controller = new AbortController();
       const timer = setTimeout(function () { controller.abort(); }, 90000);
       try {
-        const ingredients = input.value.trim();
+        // Clean the list: split on commas, new lines or semicolons,
+        // remove duplicates, and cap at 40 so the request stays fast.
+        const parts = String(input.value).split(/[,\n;]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+        const seen = {};
+        const unique = [];
+        for (let i = 0; i < parts.length && unique.length < 40; i++) {
+          const key = parts[i].toLowerCase();
+          if (!seen[key]) { seen[key] = 1; unique.push(parts[i]); }
+        }
+        const ingredients = unique.join(', ');
         const filters = [
           selectedDiet !== 'Any' ? 'diet ' + selectedDiet : '',
           selectedTime !== 'Any' ? selectedTime : '',
@@ -1595,13 +1604,13 @@ Assume the user already has salt, oil, water and basic spices.
           selectedSpice !== 'Any' ? selectedSpice : '',
           selectedMeal !== 'Any' ? selectedMeal : ''
         ].filter(Boolean).join(', ');
-        // Short prompt, no long JSON example (the example confuses the free model).
-        const prompt = "Give 3 easy recipes using: " + ingredients +
+        // Compact prompt: 3 recipes fit inside the free tier's 1,500-token
+        // cap even when the ingredient list is very long.
+        const prompt = "Pick 3 quick dishes using these ingredients: " + ingredients +
           (filters ? ". Filters: " + filters : "") +
-          ". User has salt, oil, water. " +
-          "Reply with ONLY valid JSON and nothing else. " +
-          "Keys per recipe: name, time, style, ingredients (each with item, quantity, have), steps (2 short steps). " +
-          "Keep each step under 15 words. No extra fields, no markdown, no explanation.";
+          ". Use at most 5 listed ingredients per dish. User has salt, oil, water. " +
+          "Reply with ONLY a JSON array. Each recipe: name, time (like 20 min), style, " +
+          "ingredients (array of {item, quantity, have}), steps (2 steps, max 10 words each). No other text.";
 
         function rateLimitError(seconds) {
           const e = new Error('Free AI allows about one request every 45 seconds to stay free for everyone.');
@@ -1622,7 +1631,8 @@ Assume the user already has salt, oil, water and basic spices.
               body: JSON.stringify({
                 model: 'openai',
                 temperature: 0.2,
-                max_tokens: 1600,
+                max_tokens: 1500,
+                reasoning_effort: 'low',
                 messages: [
                   { role: 'system', content: 'You output only valid JSON.' },
                   { role: 'user', content: prompt }
