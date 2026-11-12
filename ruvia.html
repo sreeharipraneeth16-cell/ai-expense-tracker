@@ -698,12 +698,16 @@ Assume the user already has salt, oil, water and basic spices.
     // 8. CALL THE GEMINI API
     // ------------------------------------------------------------------
     async function getRecipes() {
-      // No Gemini key? No problem — use the free AI instead (no key needed).
-      // This way the "Get recipes" button works for everyone.
+      // No Gemini key needed. If no key is set, quietly hand over to the
+      // free AI (Pollinations) — no red error, no setup, no account.
       if (!GEMINI_API_KEY || GEMINI_API_KEY === 'PASTE_YOUR_API_KEY_HERE') {
-        showError('No Gemini key added, so we will use the free AI instead. No key needed.');
-        const freeBtn = document.getElementById('freeAiBtn');
-        if (freeBtn) freeBtn.click();
+        errorBox.style.display = 'none';
+        // Call the free AI directly (falls back to the hidden button if needed).
+        if (typeof getFreeRecipes === 'function') getFreeRecipes();
+        else {
+          const freeBtn = document.getElementById('freeAiBtn');
+          if (freeBtn) freeBtn.click();
+        }
         return;
       }
 
@@ -1513,7 +1517,9 @@ Assume the user already has salt, oil, water and basic spices.
       const label = document.getElementById('freeAiBtnText');
       const btn = document.getElementById('freeAiBtn');
       const mainLabel = document.getElementById('btnText');
+      const mainBtn = document.getElementById('getRecipesBtn');
       btn.disabled = true;
+      if (mainBtn) mainBtn.disabled = true;
       label.textContent = '✨ Thinking...';
       if (mainLabel) mainLabel.textContent = '✨ Thinking... (10–20 seconds)';
       errorBox.style.display = 'none';
@@ -1574,6 +1580,7 @@ Assume the user already has salt, oil, water and basic spices.
         showError("We couldn't get recipes from Free AI.\n" + msg);
       } finally {
         btn.disabled = false;
+        if (mainBtn) mainBtn.disabled = false;
         label.textContent = '✨ Free AI — no key needed';
         if (mainLabel) mainLabel.textContent = '✨ Get recipes — Free AI, no key needed';
       }
