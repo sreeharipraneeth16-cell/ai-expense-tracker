@@ -1427,29 +1427,82 @@ Assume the user already has salt, oil, water and basic spices.
   <script>
     // Free AI handler: uses Pollinations POST, no key, good quality.
     // POST is better than GET for long prompts (no URL length limit).
-    // Forgiving JSON parser for the free AI (it sometimes adds extra words,
-    // markdown fences, or trailing commas). Tries several cleanups, then
-    // extracts just the recipes array. Returns null if it truly cannot parse.
+    // Clean up one recipe object so the page always gets usable data,
+    // even if the AI forgets a field or writes ingredients as plain text.
+    function normalizeRecipe(r) {
+      if (!r || typeof r !== 'object' || !r.name) return null;
+      const ingredients = Array.isArray(r.ingredients) ? r.ingredients.map(function (i) {
+        if (typeof i === 'string') return { item: i, quantity: '', have: true };
+        return {
+          item: String(i.item || i.name || ''),
+          quantity: String(i.quantity || i.amount || ''),
+          have: i.have !== false
+        };
+      }).filter(function (i) { return i.item; }) : [];
+      const steps = Array.isArray(r.steps) ? r.steps.map(function (s) {
+        return typeof s === 'string' ? s : String((s && (s.text || s.step)) || '');
+      }).filter(Boolean) : [];
+      return {
+        name: String(r.name),
+        time: String(r.time || ''),
+        style: String(r.style || ''),
+        ingredients: ingredients,
+        steps: steps
+      };
+    }
+
+    // Forgiving JSON parser for the free AI. It may return:
+    //   - a bare array:            [ {...}, {...} ]
+    //   - an object:               {"recipes":[...]}
+    //   - a single recipe object:  {...}
+    //   - markdown fences, extra words, or trailing commas.
+    // We try every likely shape and return a clean recipe list (or null).
     function parseRecipesSafe(text) {
       if (!text) return null;
       let t = String(text).trim();
       t = t.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const candidates = [];
-      try { candidates.push(JSON.parse(t)); } catch (e) {}
-      const m = t.match(/\{[\s\S]*\}/);
-      if (m) { try { candidates.push(JSON.parse(m[0])); } catch (e) {} }
-      // Fix trailing commas like {"a":1,} which break JSON.parse
-      const fixed = t.replace(/,\s*([}\]])/g, '$1');
-      try { candidates.push(JSON.parse(fixed)); } catch (e) {}
-      if (m) { try { candidates.push(JSON.parse(m[0].replace(/,\s*([}\]])/g, '$1'))); } catch (e) {} }
-      // Last resort: pull out just the "recipes": [...] array
-      const arr = t.match(/"recipes"\s*:\s*(\[[\s\S]*\])/);
-      if (arr) {
-        try { candidates.push({ recipes: JSON.parse(arr[1]) }); } catch (e) {}
-        try { candidates.push({ recipes: JSON.parse(arr[1].replace(/,\s*([}\]])/g, '$1')) }); } catch (e) {}
+
+      // Remove trailing commas like {"a":1,} or [1,2,] which break JSON.parse
+      const fix = function (s) { return s.replace(/,\s*([}\]])/g, '$1'); };
+      const tryParse = function (s) { try { return JSON.parse(s); } catch (e) { return null; } };
+
+      // Build a list of strings worth trying: whole text, first {...}, first [...]
+      const raw = [t];
+      const objMatch = t.match(/\{[\s\S]*\}/);
+      if (objMatch) raw.push(objMatch[0]);
+      const arrMatch = t.match(/\[\s*\{[\s\S]*\}\s*\]/);
+      if (arrMatch) raw.push(arrMatch[0]);
+
+      const candidates = tryParse(t);
+      const all = [];
+      if (candidates) all.push(candidates);
+      raw.forEach(function (s) {
+        const v = tryParse(s); if (v) all.push(v);
+        const f = tryParse(fix(s)); if (f) all.push(f);
+      });
+
+      // Accept arrays, {recipes:[...]}, {recipe:[...]}, or a single recipe
+      for (let i = 0; i < all.length; i++) {
+        const v = all[i];
+        let list = null;
+        if (Array.isArray(v)) list = v;
+        else if (v && Array.isArray(v.recipes)) list = v.recipes;
+        else if (v && Array.isArray(v.recipe)) list = v.recipe;
+        else if (v && v.name) list = [v];
+        if (list && list.length) {
+          const cleaned = list.map(normalizeRecipe).filter(Boolean);
+          if (cleaned.length) return cleaned;
+        }
       }
-      for (const c of candidates) {
-        if (c && Array.isArray(c.recipes) && c.recipes.length) return c.recipes;
+
+      // Last resort: pull out just the "recipes": [...] array
+      const m = t.match(/"recipes"\s*:\s*(\[[\s\S]*\])/);
+      if (m) {
+        const arr = tryParse(m[1]) || tryParse(fix(m[1]));
+        if (Array.isArray(arr)) {
+          const cleaned = arr.map(normalizeRecipe).filter(Boolean);
+          if (cleaned.length) return cleaned;
+        }
       }
       return null;
     }
