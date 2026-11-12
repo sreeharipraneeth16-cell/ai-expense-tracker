@@ -73,6 +73,7 @@
     .spinner{width:20px;height:20px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
     .error-box{background:#FFF1E8;color:#8A3B1F;border:1px solid #F0C4A8;border-radius:14px;padding:16px 18px;margin-bottom:22px;font-size:.95rem;white-space:pre-wrap;display:none}
+    .error-box.notice{background:#EAF4EE;color:#1B4332;border-color:#BFDCCB}
 
     /* Results */
     .results-heading{font-size:1.6rem;font-weight:700;color:var(--forest);margin-bottom:20px}
@@ -827,6 +828,14 @@ Assume the user already has salt, oil, water and basic spices.
     // 10. SHOW AN ERROR MESSAGE IN THE RED BOX
     // ------------------------------------------------------------------
     function showError(message) {
+      errorBox.classList.remove('notice');
+      errorBox.textContent = message;
+      errorBox.style.display = 'block';
+    }
+
+    // Friendly green message (used when we show offline ideas instead).
+    function showNotice(message) {
+      errorBox.classList.add('notice');
       errorBox.textContent = message;
       errorBox.style.display = 'block';
     }
@@ -1544,6 +1553,146 @@ Assume the user already has salt, oil, water and basic spices.
       return null;
     }
 
+    // ------------------------------------------------------------------
+    // OFFLINE FALLBACK RECIPES
+    // If the free AI is busy or rate-limited, build 3 simple recipes from
+    // the user's own ingredients so there is always an answer.
+    // ------------------------------------------------------------------
+    function buildLocalRecipes(rawItems) {
+      const items = (rawItems || []).map(function (s) { return String(s).trim(); }).filter(Boolean);
+      const lower = items.map(function (s) { return s.toLowerCase(); });
+      function find(words) {
+        for (let i = 0; i < items.length; i++) {
+          for (let j = 0; j < words.length; j++) {
+            if (lower[i].indexOf(words[j]) >= 0) return items[i];
+          }
+        }
+        return '';
+      }
+      function ing(name, quantity) {
+        return { item: name, quantity: quantity, have: true };
+      }
+      const veg = items.filter(function (it) {
+        return /spinach|potato|carrot|bean|pea|mushroom|garlic|onion|tomato|capsicum|pepper|broccoli|corn|pumpkin|cauliflower|cabbage|lettuce|cucumber|chilli|ginger|coriander|mint|leek|celery|zucchini|eggplant/i.test(it);
+      }).slice(0, 3);
+      const egg = find(['egg']);
+      const rice = find(['rice']);
+      const pasta = find(['pasta', 'noodle', 'spaghetti', 'macaroni']);
+      const bread = find(['bread', 'toast', 'bun', 'tortilla']);
+      const protein = find(['chicken', 'paneer', 'tofu', 'fish', 'beef', 'lamb', 'prawn', 'shrimp']);
+      const milk = find(['milk', 'cream', 'yogurt', 'curd']);
+      const cheese = find(['cheese']);
+      const potato = find(['potato']);
+      const oats = find(['oats', 'oatmeal']);
+      const fruit = find(['banana', 'apple', 'mango', 'berry', 'berries', 'orange', 'pear', 'peach']);
+      const lentil = find(['lentil', 'dal', 'chickpea']);
+      const tomato = find(['tomato']);
+      const onion = find(['onion']);
+      const flour = find(['flour', 'maida', 'atta']);
+      const spice = find(['chilli', 'pepper', 'cumin', 'turmeric', 'paprika', 'masala']);
+
+      const recipes = [];
+      function add(r) { if (r && recipes.length < 3) recipes.push(r); }
+
+      if (egg) {
+        add({
+          name: veg.length ? 'Veggie Omelette' : 'Fluffy Scrambled Eggs',
+          time: '10 min', style: 'Breakfast',
+          ingredients: [ing(egg, '2'), ing(veg[0] || onion || 'salt', veg[0] || onion ? '1 small' : 'to taste'), ing('oil', '1 tbsp')],
+          steps: ['Beat the eggs with a pinch of salt.', 'Heat oil, soften the vegetables for 2 minutes.', 'Pour in the eggs and cook until just set.']
+        });
+      }
+      if (rice) {
+        add({
+          name: egg ? 'Egg Fried Rice' : 'One-Pan Veggie Rice',
+          time: '20 min', style: 'Lunch',
+          ingredients: [ing(rice, '1 cup'), ing(egg || veg[0] || onion || 'peas', egg ? '2' : '1 cup'), ing('oil', '1 tbsp'), ing('salt', 'to taste')],
+          steps: ['Cook the rice and let it cool slightly.', 'Fry the vegetables and egg in oil for 3 minutes.', 'Add the rice and salt, stir-fry 2 minutes.']
+        });
+      }
+      if (pasta && (tomato || cheese || milk)) {
+        add({
+          name: tomato ? 'Tomato Pasta Toss' : 'Creamy Pasta',
+          time: '20 min', style: 'Dinner',
+          ingredients: [ing(pasta, '200 g'), ing(tomato || cheese || milk, tomato ? '2' : '3 tbsp'), ing('oil', '1 tbsp'), ing('salt', 'to taste')],
+          steps: ['Boil the pasta in salted water until tender.', 'Warm the sauce in a pan with the oil.', 'Toss the pasta through and serve.']
+        });
+      }
+      if (protein) {
+        add({
+          name: (tomato || onion) ? 'Quick ' + protein + ' Curry' : 'Pan-Seared ' + protein,
+          time: '25 min', style: 'Dinner',
+          ingredients: [ing(protein, '250 g'), ing(tomato || onion || 'water', '1 cup'), ing(spice || 'salt', spice ? '1 tsp' : 'to taste'), ing('oil', '1 tbsp')],
+          steps: ['Brown the ' + protein + ' in the oil.', 'Add tomato or onion and the spices.', 'Simmer 10 minutes until cooked through.']
+        });
+      }
+      if (potato) {
+        add({
+          name: 'Crispy Potato Roast', time: '30 min', style: 'Side',
+          ingredients: [ing(potato, '3 medium'), ing('oil', '2 tbsp'), ing(spice || 'pepper', '1 tsp'), ing('salt', 'to taste')],
+          steps: ['Cut the potatoes into wedges.', 'Toss with oil, salt and spices.', 'Roast at 200°C for about 25 minutes.']
+        });
+      }
+      if (bread) {
+        add({
+          name: cheese ? 'Cheese Toastie' : (egg ? 'Egg Toast' : 'Veggie Sandwich'),
+          time: '8 min', style: 'Snack',
+          ingredients: [ing(bread, '2 slices'), ing(cheese || egg || veg[0] || 'butter', '1'), ing('oil', '1 tsp'), ing('salt', 'to taste')],
+          steps: ['Layer the filling between the bread.', 'Toast or pan-fry 3 minutes per side.', 'Cut in half and serve warm.']
+        });
+      }
+      if (oats || fruit) {
+        add({
+          name: oats ? 'Creamy Oat Bowl' : 'Fresh Fruit Bowl',
+          time: '7 min', style: 'Breakfast',
+          ingredients: [ing(oats || fruit, oats ? '1/2 cup' : '1 cup'), ing(milk || 'water', '1 cup'), ing(fruit || 'honey', '1')],
+          steps: [oats ? 'Simmer the oats with milk for 3 minutes.' : 'Slice the fruit into a bowl.', 'Add a little honey or milk.', 'Serve warm or chilled.']
+        });
+      }
+      if (flour && milk) {
+        add({
+          name: 'Simple Pancakes', time: '15 min', style: 'Breakfast',
+          ingredients: [ing(flour, '1 cup'), ing(milk, '1 cup'), ing(egg || 'sugar', egg ? '1' : '1 tbsp'), ing('oil', '1 tbsp')],
+          steps: ['Whisk flour, milk and egg into a smooth batter.', 'Heat a lightly oiled pan.', 'Cook small pancakes 2 minutes per side.']
+        });
+      }
+      if (veg.length >= 2) {
+        add({
+          name: 'Fridge-Clear Veggie Stir-Fry', time: '15 min', style: 'Quick',
+          ingredients: veg.map(function (v) { return ing(v, '1 cup'); }).concat([ing('oil', '1 tbsp'), ing('salt', 'to taste')]),
+          steps: ['Chop all the vegetables.', 'Stir-fry in hot oil for about 5 minutes.', 'Season with salt and serve.']
+        });
+      }
+      if (lentil) {
+        add({
+          name: 'Everyday Lentil Soup', time: '25 min', style: 'Comfort',
+          ingredients: [ing(lentil, '1 cup'), ing(onion || tomato || 'water', onion || tomato ? '1' : '3 cups'), ing(spice || 'pepper', '1/2 tsp'), ing('salt', 'to taste')],
+          steps: ['Rinse the lentils well.', 'Boil with water for 20 minutes until soft.', 'Season and serve warm.']
+        });
+      }
+      if (tomato && onion) {
+        add({
+          name: 'Quick Tomato-Onion Curry', time: '20 min', style: 'Home-style',
+          ingredients: [ing(tomato, '3'), ing(onion, '1'), ing('oil', '1 tbsp'), ing('salt', 'to taste')],
+          steps: ['Fry the onion until soft.', 'Add chopped tomato and salt.', 'Simmer 10 minutes and serve.']
+        });
+      }
+
+      // Guarantee 3 cards even for a very short list.
+      const fillers = ['Quick', 'Simple', 'Everyday'];
+      let fi = 0;
+      while (recipes.length < 3 && fi < 3) {
+        const base = items[fi] || items[0] || 'mixed vegetables';
+        add({
+          name: fillers[fi] + ' ' + base + ' Pan Dish', time: '15 min', style: 'Quick',
+          ingredients: [ing(base, '1 cup'), ing('oil', '1 tbsp'), ing('salt', 'to taste')],
+          steps: ['Prep the ' + base + '.', 'Cook in a little oil for about 8 minutes.', 'Season with salt and serve.']
+        });
+        fi++;
+      }
+      return recipes.slice(0, 3);
+    }
+
     // Pollinations free tier allows about 1 reply every 45 seconds per IP.
     // Respect it with a visible countdown instead of hammering the API.
     const FREE_AI_COOLDOWN_SECONDS = 45;
@@ -1583,6 +1732,7 @@ Assume the user already has salt, oil, water and basic spices.
       if (mainLabel) mainLabel.textContent = '✨ Thinking... (10–20 seconds)';
       errorBox.style.display = 'none';
       // Keep old results on screen until new ones arrive.
+      let uniqueItems = [];
       const controller = new AbortController();
       const timer = setTimeout(function () { controller.abort(); }, 90000);
       try {
@@ -1596,6 +1746,7 @@ Assume the user already has salt, oil, water and basic spices.
           if (!seen[key]) { seen[key] = 1; unique.push(parts[i]); }
         }
         const ingredients = unique.join(', ');
+        uniqueItems = unique;
         const filters = [
           selectedDiet !== 'Any' ? 'diet ' + selectedDiet : '',
           selectedTime !== 'Any' ? selectedTime : '',
@@ -1696,17 +1847,21 @@ Assume the user already has salt, oil, water and basic spices.
       } catch (err) {
         clearTimeout(timer);
         console.error(err);
-        let msg;
-        if (err && err.name === 'AbortError') {
-          msg = 'Free AI took too long (90 seconds). Please try again.';
-        } else if (err && err.cooldown) {
-          msg = 'Free AI allows about one request every 45 seconds so it stays free for everyone. Please wait a moment, then tap again.';
-        } else if (err && /Failed to fetch|Load failed|NetworkError/i.test(err.message || '')) {
-          msg = 'Could not reach the free AI service. Check your internet connection, turn off any ad-blocker, then try again.';
+        let why;
+        if (err && err.name === 'AbortError') why = 'Free AI took too long';
+        else if (err && err.cooldown) why = 'Free AI is cooling down (one request every ~45 seconds)';
+        else if (err && /Failed to fetch|Load failed|NetworkError/i.test(err.message || '')) why = 'The free AI service could not be reached';
+        else why = 'Free AI is busy';
+
+        // Never leave the user with nothing: 3 quick recipes from their
+        // own ingredients, generated instantly on the device.
+        const local = buildLocalRecipes(uniqueItems);
+        if (local.length) {
+          renderRecipes(local);
+          showNotice(why + '. Here are 3 quick ideas from your ingredients instead — tap ✨ Get recipes again in a minute for fresh AI recipes.');
         } else {
-          msg = (err && err.message) || 'Please try again.';
+          showError("We couldn't get recipes from Free AI.\n" + why + '. Please enter a few ingredients and try again.');
         }
-        showError("We couldn't get recipes from Free AI.\n" + msg);
         if (err && err.cooldown) {
           startFreeAiCooldown(err.wait || FREE_AI_COOLDOWN_SECONDS);
         } else if (mainBtn) {
